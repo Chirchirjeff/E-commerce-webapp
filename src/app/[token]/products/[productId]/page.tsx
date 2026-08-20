@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ImageGallery } from '@/components/products/ImageGallery'
 import { AddToCartForm } from '@/components/products/AddToCartForm'
 import { ProductSpecifications } from '@/components/products/ProductSpecifications'
+import { ProductShareButton } from '@/components/products/ProductShareButton'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { productsAPI } from '@/lib/api'
@@ -147,6 +148,14 @@ export default function ProductDetailsPage() {
             {/* Add to Cart Form */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <AddToCartForm product={product} shopId={product.shopId} />
+            </div>
+
+            {/* Share Product Button */}
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <ProductShareButton
+                productId={product.id}
+                productName={product.name}
+              />
             </div>
 
             {/* Specifications */}

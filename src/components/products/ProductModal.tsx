@@ -7,6 +7,7 @@ import { formatPrice } from '@/lib/utils'
 import { normalizeProductImages } from '@/lib/image-utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
+import { ProductShareButton } from './ProductShareButton'
 import { X, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 
 interface ProductModalProps {
@@ -319,18 +320,30 @@ export function ProductModal({
 
               {/* Add to Cart Button */}
               {(product as any).stockQuantity > 0 && onAddToCart && (
-                <Button
-                  onClick={handleAddToCart}
-                  className="w-full py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  Add to Cart ({quantity})
-                </Button>
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleAddToCart}
+                    className="w-full py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Add to Cart ({quantity})
+                  </Button>
+                  <ProductShareButton
+                    productId={product.id}
+                    productName={product.name}
+                  />
+                </div>
               )}
 
               {(product as any).stockQuantity === 0 && (
-                <Button disabled className="w-full py-3 opacity-50">
-                  Out of Stock
-                </Button>
+                <div className="space-y-3">
+                  <Button disabled className="w-full py-3 opacity-50">
+                    Out of Stock
+                  </Button>
+                  <ProductShareButton
+                    productId={product.id}
+                    productName={product.name}
+                  />
+                </div>
               )}
 
               {/* Category */}

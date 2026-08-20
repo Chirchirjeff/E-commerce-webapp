@@ -128,10 +128,10 @@ export default function CartPage() {
                       {/* Product Details */}
                       <div className="flex-1">
                         <Link
-                          href={`/cart`}
+                          href={`/${product?.shopId}/products/${item.productId}`}
                           className="font-semibold text-gray-900 hover:text-primary-600"
                         >
-                          {item.product?.name || 'Product'}
+                          {product?.name || 'Product'}
                         </Link>
                         <p className="text-gray-600 text-sm mt-1">
                           {formatPrice(item.price)} each

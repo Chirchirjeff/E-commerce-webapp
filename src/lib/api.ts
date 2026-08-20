@@ -50,6 +50,67 @@ export const productsAPI = {
 }
 
 // ========================================
+// PRODUCT LINKS ENDPOINTS
+// ========================================
+
+export const productLinksAPI = {
+  /**
+   * Create a new product link (requires authentication)
+   */
+  create: (productId: string, data: any) =>
+    apiClient.post(`/product-links/${productId}`, data),
+
+  /**
+   * Get all links for a product (requires authentication)
+   */
+  getByProduct: (productId: string) =>
+    apiClient.get(`/product-links/product/${productId}`),
+
+  /**
+   * Get a specific link (requires authentication)
+   */
+  getOne: (linkId: string) =>
+    apiClient.get(`/product-links/link/${linkId}`),
+
+  /**
+   * Update a product link (requires authentication)
+   */
+  update: (linkId: string, data: any) =>
+    apiClient.patch(`/product-links/link/${linkId}`, data),
+
+  /**
+   * Toggle link active status (requires authentication)
+   */
+  toggle: (linkId: string) =>
+    apiClient.patch(`/product-links/link/${linkId}/toggle`),
+
+  /**
+   * Delete a product link (requires authentication)
+   */
+  delete: (linkId: string) =>
+    apiClient.delete(`/product-links/link/${linkId}`),
+
+  /**
+   * Get analytics for a specific link (requires authentication)
+   */
+  getAnalytics: (linkId: string) =>
+    apiClient.get(`/product-links/link/${linkId}/analytics`),
+
+  /**
+   * Get all analytics for a product (requires authentication)
+   */
+  getProductAnalytics: (productId: string) =>
+    apiClient.get(`/product-links/product/${productId}/analytics`),
+
+  /**
+   * Resolve a product link by token (public endpoint)
+   * Records a visit and returns product data
+   */
+  resolve: (token: string) =>
+    apiClient.get(`/product-links/resolve/${token}`),
+}
+
+// ========================================
 // CATEGORIES ENDPOINTS
 // ========================================
 
@@ -69,6 +130,37 @@ export const categoriesAPI = {
     apiClient.get(
       `/marketplace-categories/${id}/products?includeChildren=${includeChildren}`
     ),
+
+  /**
+   * Get categories that a shop has products in
+   * Filters all marketplace categories to only include those with products from the shop
+   */
+  getShopCategories: async (shopId: string) => {
+    try {
+      // Fetch all categories
+      const allCategoriesResponse = await categoriesAPI.getAll(false, false)
+      const allCategories = allCategoriesResponse.data as any[]
+
+      // Fetch shop products
+      const shopProductsResponse = await productsAPI.getByShop(shopId)
+      const shopProducts = shopProductsResponse.data as any[]
+
+      // Get unique category IDs from shop products
+      const shopCategoryIds = new Set(
+        shopProducts.map((p) => p.marketplaceCategoryId)
+      )
+
+      // Filter categories to only those the shop has products in
+      const shopCategories = allCategories.filter((cat) =>
+        shopCategoryIds.has(cat.id)
+      )
+
+      return { data: shopCategories }
+    } catch (error) {
+      console.error('Error fetching shop categories:', error)
+      throw error
+    }
+  },
 }
 
 // ========================================

@@ -147,7 +147,7 @@ export default function ProductDetailsPage() {
 
             {/* Add to Cart Form */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <AddToCartForm product={product} shopId={product.shopId} />
+              <AddToCartForm product={product} shopId={product.shopId} shopToken={token} />
             </div>
 
             {/* Share Product Button */}

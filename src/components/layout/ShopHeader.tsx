@@ -12,6 +12,7 @@ interface ShopHeaderProps {
 
 export function ShopHeader({ shop }: ShopHeaderProps) {
   const { theme } = useTheme()
+  const isVerified = shop.verificationStatus === 'ACTIVE'
 
   const bgClass =
     theme === 'dark'
@@ -26,7 +27,7 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
   return (
     <div className={cn('transition-colors duration-200', bgClass)}>
       {/* Cover Image */}
-      {shop.coverImageUrl ? (
+      {shop.coverPhoto ? (
         <div className={cn(
           'relative w-full h-40 sm:h-56 md:h-64 bg-gradient-to-br overflow-hidden',
           theme === 'dark'
@@ -34,7 +35,7 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
             : 'from-warm-100 to-gold-100'
         )}>
           <Image
-            src={shop.coverImageUrl}
+            src={shop.coverPhoto}
             alt={shop.name}
             fill
             className="object-cover"
@@ -65,9 +66,9 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
               ? 'border-slate-800 shadow-warm-600/20'
               : 'border-white shadow-warm-500/20'
           )}>
-            {shop.profileImageUrl ? (
+            {shop.businessLogo ? (
               <Image
-                src={shop.profileImageUrl}
+                src={shop.businessLogo}
                 alt={`${shop.name} logo`}
                 fill
                 className="object-cover"
@@ -96,7 +97,7 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
               </ThemedText>
 
               {/* Verified Badge */}
-              {shop.isVerified && (
+              {isVerified && (
                 <ThemedBadge variant="success">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
@@ -111,12 +112,12 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
             </div>
 
             {/* Description */}
-            {shop.description && (
+            {shop.businessDescription && (
               <p className={cn(
                 'mt-2 text-sm sm:text-base line-clamp-2 transition-colors duration-200',
                 descriptionClass
               )}>
-                {shop.description}
+                {shop.businessDescription}
               </p>
             )}
 

@@ -63,23 +63,14 @@ export default function StorefrontPage() {
     queryFn: async () => {
       if (!shopData?.id) return []
 
-      // If searching, use search API
+      // If searching, use search API (search is still client-side text match)
       if (searchQuery) {
         const response = await productsAPI.search(searchQuery, shopData.id)
         return response.data as Product[]
       }
 
-      // If category selected, get products from that category filtered by shop
-      if (selectedCategoryId) {
-        const response = await productsAPI.getByShop(shopData.id)
-        const allShopProducts = response.data as Product[]
-        return allShopProducts.filter(
-          (p) => p.marketplaceCategoryId === selectedCategoryId
-        )
-      }
-
-      // Get all shop products
-      const response = await productsAPI.getByShop(shopData.id)
+      // Pass categoryId to the backend — filtering is now server-side
+      const response = await productsAPI.getByShop(shopData.id, selectedCategoryId)
       return response.data as Product[]
     },
     enabled: !!shopData?.id,
@@ -279,6 +270,7 @@ export default function StorefrontPage() {
             <ProductGrid
               products={paginatedProducts}
               shopId={shopData?.id || ''}
+              shopToken={token}
               isLoading={productsLoading}
             />
 

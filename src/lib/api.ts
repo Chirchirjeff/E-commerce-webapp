@@ -9,6 +9,43 @@ export const apiClient = axios.create({
   },
 })
 
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const saved = window.localStorage.getItem('buyer-auth-storage')
+    const token = saved ? JSON.parse(saved)?.state?.token : null
+    if (token) config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// ── Global API error logger ───────────────────────────────────────────────────
+// Logs every failed request to the terminal so errors are easy to spot and
+// share. Successful responses pass through untouched.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // The server replied with a non-2xx status
+      console.error(
+        `[API ERROR] ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+        `→ ${error.response.status} ${error.response.statusText}`,
+        '\nResponse:', error.response.data,
+      )
+    } else if (error.request) {
+      // Request was made but no response received (network down, CORS, timeout)
+      console.error(
+        `[API NO RESPONSE] ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+        '\nRequest was sent but no response received. Check that the backend is running at:',
+        API_URL,
+      )
+    } else {
+      // Something went wrong setting up the request
+      console.error('[API REQUEST SETUP ERROR]', error.message)
+    }
+    return Promise.reject(error)
+  }
+)
+
 // ========================================
 // SHOP ENDPOINTS
 // ========================================
@@ -38,8 +75,11 @@ export const productsAPI = {
   getOne: (id: string) =>
     apiClient.get(`/products/${id}`),
 
-  getByShop: (shopId: string) =>
-    apiClient.get(`/products?shopId=${shopId}`),
+  getByShop: (shopId: string, categoryId?: string) => {
+    const params = new URLSearchParams({ shopId })
+    if (categoryId) params.append('categoryId', categoryId)
+    return apiClient.get(`/products?${params.toString()}`)
+  },
 
   search: (query: string, shopId?: string) => {
     const params = new URLSearchParams()
@@ -132,35 +172,11 @@ export const categoriesAPI = {
     ),
 
   /**
-   * Get categories that a shop has products in
-   * Filters all marketplace categories to only include those with products from the shop
+   * Get categories that a shop has products in.
+   * Hits the dedicated backend endpoint — single DB query, no client-side joining.
    */
-  getShopCategories: async (shopId: string) => {
-    try {
-      // Fetch all categories
-      const allCategoriesResponse = await categoriesAPI.getAll(false, false)
-      const allCategories = allCategoriesResponse.data as any[]
-
-      // Fetch shop products
-      const shopProductsResponse = await productsAPI.getByShop(shopId)
-      const shopProducts = shopProductsResponse.data as any[]
-
-      // Get unique category IDs from shop products
-      const shopCategoryIds = new Set(
-        shopProducts.map((p) => p.marketplaceCategoryId)
-      )
-
-      // Filter categories to only those the shop has products in
-      const shopCategories = allCategories.filter((cat) =>
-        shopCategoryIds.has(cat.id)
-      )
-
-      return { data: shopCategories }
-    } catch (error) {
-      console.error('Error fetching shop categories:', error)
-      throw error
-    }
-  },
+  getShopCategories: (shopId: string) =>
+    apiClient.get(`/shops/${shopId}/categories`),
 }
 
 // ========================================
@@ -173,4 +189,77 @@ export const ordersAPI = {
 
   getOne: (id: string) =>
     apiClient.get(`/orders/${id}`),
+
+  track: (token: string) =>
+    apiClient.get(`/orders/track/${token}`),
+
+  trackByOrderNumber: (orderNumber: string) =>
+    apiClient.get(`/orders/mine/number/${encodeURIComponent(orderNumber)}`),
+}
+
+export const authAPI = {
+  registerBuyer: (data: { name: string; email: string; password: string; phone?: string }) =>
+    apiClient.post('/auth/buyer/register', data),
+  beginBuyerLogin: (data: { email: string; password: string }) =>
+    apiClient.post('/auth/buyer/login', data),
+  verifyBuyerCode: (data: { email: string; code: string; purpose: 'LOGIN' | 'VERIFY_EMAIL' }) =>
+    apiClient.post<{ access_token: string }>('/auth/buyer/verify', data),
+  requestBuyerPasswordReset: (email: string) =>
+    apiClient.post<{ message: string }>('/auth/buyer/password-reset/request', { email }),
+  confirmBuyerPasswordReset: (data: { token: string; password: string }) =>
+    apiClient.post<{ message: string }>('/auth/buyer/password-reset/confirm', data),
+  getMe: (token?: string) => apiClient.get('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
+  saveAddress: (data: any) => apiClient.post('/auth/me/addresses', data),
+}
+
+// ========================================
+// MPESA ENDPOINTS
+// ========================================
+
+export interface StkPushPayload {
+  phoneNumber: string
+  amount: number
+  orderPayload: {
+    customerName: string
+    customerEmail: string
+    customerPhone: string
+    deliveryAddress: string
+    deliveryCity: string
+    deliveryState: string
+    deliveryZip: string
+    shopId: string
+    items: Array<{ productId: string; quantity: number; price: number }>
+    total: number
+  }
+}
+
+export interface StkPushResponse {
+  checkoutRequestId: string
+  merchantRequestId: string
+  responseDescription: string
+  orderNumber: string
+}
+
+export interface MpesaStatusResponse {
+  status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'TIMEOUT'
+  orderId: string | null
+  orderNumber: string | null
+  resultDescription: string | null
+  mpesaReceiptNumber: string | null
+  trackingToken: string | null
+}
+
+export const mpesaAPI = {
+  /**
+   * Initiate an STK push — buyer gets a prompt on their phone.
+   * Requires a valid JWT in the Authorization header.
+   */
+  initiateStkPush: (payload: StkPushPayload) =>
+    apiClient.post<StkPushResponse>('/mpesa/stk-push', payload),
+
+  /**
+   * Poll the status of an in-flight STK push by its CheckoutRequestID.
+   */
+  getStatus: (checkoutRequestId: string) =>
+    apiClient.get<MpesaStatusResponse>(`/mpesa/status/${checkoutRequestId}`),
 }

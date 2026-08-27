@@ -2,11 +2,10 @@ export interface Shop {
   id: string
   name: string
   slug: string
-  description?: string
-  coverImageUrl?: string
-  profileImageUrl?: string
+  businessDescription?: string
+  businessLogo?: string
+  coverPhoto?: string
   ownerId: string
-  isVerified: boolean
   verificationStatus: string
   createdAt: string
   updatedAt: string
@@ -96,6 +95,8 @@ export interface OrderItem {
 
 export interface Order {
   id: string
+  orderNumber: string
+  trackingToken?: string
   shopId: string
   customerName: string
   customerEmail: string
@@ -109,6 +110,12 @@ export interface Order {
   status: string
   createdAt: string
   updatedAt: string
+  shop?: { id: string; name: string }
+  mpesaReceiptNumber?: string | null
+  trackingNumber?: string | null
+  shippingCarrier?: string | null
+  estimatedDelivery?: string | null
+  dispatchedAt?: string | null
 }
 
 export interface ShopLink {

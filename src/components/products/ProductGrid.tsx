@@ -13,15 +13,16 @@ import { useCartStore } from '@/stores/cartStore'
 interface ProductGridProps {
   products: Product[]
   shopId: string
+  shopToken?: string
   isLoading?: boolean
 }
 
-function ProductGridComponent({ products, shopId, isLoading }: ProductGridProps) {
+function ProductGridComponent({ products, shopId, shopToken, isLoading }: ProductGridProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const addToCart = useCartStore((state) => state.addItem)
 
   const handleAddToCart = (product: Product, quantity: number) => {
-    addToCart(product, quantity)
+    addToCart(product, quantity, shopToken)
   }
   if (isLoading) {
     return (

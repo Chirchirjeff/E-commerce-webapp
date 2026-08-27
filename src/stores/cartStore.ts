@@ -5,7 +5,8 @@ import { CartItem, Product } from '@/types'
 export interface CartState {
   items: CartItem[]
   shopId?: string
-  addItem: (product: Product, quantity: number) => void
+  shopToken?: string
+  addItem: (product: Product, quantity: number, shopToken?: string) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -18,8 +19,9 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       shopId: undefined,
+      shopToken: undefined,
 
-      addItem: (product: Product, quantity: number) => {
+      addItem: (product: Product, quantity: number, shopToken?: string) => {
         set((state) => {
           const existingItem = state.items.find(
             (item) => item.productId === product.id
@@ -49,6 +51,7 @@ export const useCartStore = create<CartState>()(
               },
             ],
             shopId: product.shopId,
+            shopToken: shopToken ?? state.shopToken,
           }
         })
       },
@@ -75,7 +78,7 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => {
-        set({ items: [], shopId: undefined })
+        set({ items: [], shopId: undefined, shopToken: undefined })
       },
 
       getTotal: () => {

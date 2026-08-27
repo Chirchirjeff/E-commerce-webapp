@@ -9,9 +9,10 @@ import Button from '@/components/ui/Button'
 interface AddToCartFormProps {
   product: Product
   shopId: string
+  shopToken?: string
 }
 
-export function AddToCartForm({ product, shopId }: AddToCartFormProps) {
+export function AddToCartForm({ product, shopId, shopToken }: AddToCartFormProps) {
   const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
@@ -25,7 +26,7 @@ export function AddToCartForm({ product, shopId }: AddToCartFormProps) {
   const handleAddToCart = async () => {
     setIsAdding(true)
     try {
-      addItem(product, quantity)
+      addItem(product, quantity, shopToken)
       setShowNotification(true)
 
       // Hide notification after 3 seconds
@@ -41,7 +42,7 @@ export function AddToCartForm({ product, shopId }: AddToCartFormProps) {
   const handleCheckout = async () => {
     setIsAdding(true)
     try {
-      addItem(product, quantity)
+      addItem(product, quantity, shopToken)
       router.push('/cart')
     } finally {
       setIsAdding(false)

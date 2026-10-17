@@ -11,7 +11,7 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const saved = window.localStorage.getItem('buyer-auth-storage')
+    const saved = window.sessionStorage.getItem('buyer-auth-storage')
     const token = saved ? JSON.parse(saved)?.state?.token : null
     if (token) config.headers.Authorization = `Bearer ${token}`
   }
@@ -180,6 +180,19 @@ export const categoriesAPI = {
 }
 
 // ========================================
+// COLLECTIONS ENDPOINTS
+// ========================================
+
+export const collectionsAPI = {
+  /**
+   * Public — fetch active collections for a shop, each with up to 20 products.
+   * No auth required. Used by the storefront to render collection carousels.
+   */
+  getByShop: (shopId: string) =>
+    apiClient.get(`/shops/${shopId}/collections`),
+}
+
+// ========================================
 // ORDERS ENDPOINTS
 // ========================================
 
@@ -262,4 +275,22 @@ export const mpesaAPI = {
    */
   getStatus: (checkoutRequestId: string) =>
     apiClient.get<MpesaStatusResponse>(`/mpesa/status/${checkoutRequestId}`),
+}
+
+// ========================================
+// REVIEWS ENDPOINTS
+// ========================================
+
+export const reviewsAPI = {
+  /** GET /reviews/product/:productId — public, no auth */
+  getByProduct: (productId: string) =>
+    apiClient.get(`/reviews/product/${productId}`),
+
+  /** POST /reviews — requires buyer JWT + successful payment */
+  create: (data: { productId: string; rating: number; comment?: string }) =>
+    apiClient.post('/reviews', data),
+
+  /** GET /reviews/can-review/:productId — requires buyer JWT */
+  canReview: (productId: string) =>
+    apiClient.get(`/reviews/can-review/${productId}`),
 }

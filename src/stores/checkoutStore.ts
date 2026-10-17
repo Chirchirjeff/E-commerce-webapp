@@ -13,6 +13,8 @@ export interface DeliveryDetails {
 
 interface CheckoutState {
   delivery: DeliveryDetails | null
+  /** Identifies the buyer who entered the persisted delivery details. */
+  deliveryBuyerId: string | null
   mpesaPhone: string
   checkoutRequestId: string | null
   orderNumber: string | null        // reserved before payment, shown on statement
@@ -20,24 +22,26 @@ interface CheckoutState {
    *  letting the order confirmation page send the buyer back to the right shop. */
   shopToken: string | null
 
-  setDelivery: (details: DeliveryDetails) => void
+  setDelivery: (details: DeliveryDetails, buyerId: string) => void
   setMpesaPhone: (phone: string) => void
   setCheckoutRequestId: (id: string) => void
   setOrderNumber: (num: string) => void
   setShopToken: (token: string) => void
   clearCheckout: () => void
+  clearBuyerDetails: () => void
 }
 
 export const useCheckoutStore = create<CheckoutState>()(
   persist(
     (set) => ({
       delivery: null,
+      deliveryBuyerId: null,
       mpesaPhone: '',
       checkoutRequestId: null,
       orderNumber: null,
       shopToken: null,
 
-      setDelivery: (details) => set({ delivery: details }),
+      setDelivery: (details, buyerId) => set({ delivery: details, deliveryBuyerId: buyerId }),
       setMpesaPhone: (phone) => set({ mpesaPhone: phone }),
       setCheckoutRequestId: (id) => set({ checkoutRequestId: id }),
       setOrderNumber: (num) => set({ orderNumber: num }),
@@ -45,10 +49,17 @@ export const useCheckoutStore = create<CheckoutState>()(
       // confirmation page can still send the buyer back to the correct shop.
       setShopToken: (token) => set({ shopToken: token }),
       clearCheckout: () =>
-        set({ delivery: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
+        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
+      clearBuyerDetails: () =>
+        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
     }),
     {
       name: 'checkout-storage',
+      // Data saved by older versions was not associated with a buyer. Discard
+      // it during hydration instead of ever showing it to a later account.
+      onRehydrateStorage: () => (state) => {
+        if (state?.delivery && !state.deliveryBuyerId) state.clearBuyerDetails()
+      },
     }
   )
 )

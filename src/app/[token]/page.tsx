@@ -6,11 +6,13 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { ShopHeader } from '@/components/layout/ShopHeader'
 import { ShopLayoutHeader } from '@/components/layout/ShopLayoutHeader'
 import { ProductGrid } from '@/components/products/ProductGrid'
-import { CategoryFilter } from '@/components/products/CategoryFilter'
+import { CategoryBar } from '@/components/products/CategoryBar'
 import { SearchBar } from '@/components/products/SearchBar'
+import { CollectionsSection } from '@/components/collections/CollectionCarousel'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/context/ThemeContext'
 import { useShopCategories } from '@/hooks/useShopCategories'
+import { useShopCollections } from '@/hooks/useShopCollections'
 import { shopAPI, productsAPI } from '@/lib/api'
 import { Shop, Product } from '@/types'
 import { cn } from '@/lib/utils'
@@ -28,7 +30,7 @@ export default function StorefrontPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
 
-  // Fetch shop data
+  // ── Shop data ──────────────────────────────────────────────────────────────
   const {
     data: shopData,
     isLoading: shopLoading,
@@ -42,13 +44,19 @@ export default function StorefrontPage() {
     enabled: !!token,
   })
 
-  // Fetch categories specific to this shop
+  // ── Categories ─────────────────────────────────────────────────────────────
   const {
     data: categoriesData,
     isLoading: categoriesLoading,
   } = useShopCategories(shopData?.id)
 
-  // Fetch products (with optional filtering by category)
+  // ── Collections ────────────────────────────────────────────────────────────
+  const {
+    data: collectionsData,
+    isLoading: collectionsLoading,
+  } = useShopCollections(shopData?.id)
+
+  // ── Products ───────────────────────────────────────────────────────────────
   const {
     data: productsData,
     isLoading: productsLoading,
@@ -62,14 +70,10 @@ export default function StorefrontPage() {
     ],
     queryFn: async () => {
       if (!shopData?.id) return []
-
-      // If searching, use search API (search is still client-side text match)
       if (searchQuery) {
         const response = await productsAPI.search(searchQuery, shopData.id)
         return response.data as Product[]
       }
-
-      // Pass categoryId to the backend — filtering is now server-side
       const response = await productsAPI.getByShop(shopData.id, selectedCategoryId)
       return response.data as Product[]
     },
@@ -95,6 +99,13 @@ export default function StorefrontPage() {
   )
   const totalPages = Math.ceil(products.length / itemsPerPage)
 
+  // Collections are only shown when no filter is active — they're a discovery
+  // surface, not a substitute for filtered results.
+  const isFiltering = !!(searchQuery || selectedCategoryId)
+  const hasCollections =
+    !isFiltering && collectionsData && collectionsData.length > 0
+
+  // ── Error state ────────────────────────────────────────────────────────────
   if (shopError) {
     return (
       <div className={cn(
@@ -107,9 +118,7 @@ export default function StorefrontPage() {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            style={{
-              color: theme === 'dark' ? '#ef4444' : '#dc2626'
-            }}
+            style={{ color: theme === 'dark' ? '#ef4444' : '#dc2626' }}
           >
             <path
               strokeLinecap="round"
@@ -125,210 +134,200 @@ export default function StorefrontPage() {
             Shop Not Found
           </h1>
           <p className={theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}>
-            The shop you're looking for doesn't exist or has been removed.
+            The shop you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
         </div>
       </div>
     )
   }
 
+  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (shopLoading) {
     return (
       <div className={cn(
         'min-h-screen animate-pulse',
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       )}>
-        <div className={cn(
-          'h-64',
-          theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
-        )} />
+        <div className={cn('h-64', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
         <div className="max-w-7xl mx-auto px-4 py-8 space-y-4">
-          <div className={cn(
-            'h-8 w-1/3',
-            theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
-          )} />
-          <div className={cn(
-            'h-4 w-1/2',
-            theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
-          )} />
+          <div className={cn('h-8 w-1/3', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
+          <div className={cn('h-4 w-1/2', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
         </div>
       </div>
     )
   }
 
-  const sidebarBgClass =
-    theme === 'dark'
-      ? 'bg-slate-800 border-slate-700'
-      : 'bg-white border-gray-200'
-
-  const filterTextClass =
-    theme === 'dark'
-      ? 'text-slate-300'
-      : 'text-gray-600'
+  const filterTextClass = theme === 'dark' ? 'text-slate-300' : 'text-gray-600'
 
   return (
     <div className={cn(
       'min-h-screen transition-colors duration-200',
       theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
     )}>
-      {/* Shop Header with Cover and Logo */}
+      {/* Shop cover + logo */}
       {shopData && <ShopHeader shop={shopData} />}
 
-      {/* Shop Layout Header with Stats */}
+      {/* Stats bar */}
       {shopData && (
         <ShopLayoutHeader
           shopName={shopData.name}
           productCount={products.length}
           categoryCount={categoriesData?.length || 0}
-          showActions={true}
         />
       )}
 
-      {/* Main Content */}
+      {/* Sticky category strip */}
+      <CategoryBar
+        categories={categoriesData || []}
+        selectedCategoryId={selectedCategoryId}
+        onSelectCategory={handleCategoryChange}
+        isLoading={categoriesLoading}
+      />
+
+      {/* ── Main content ────────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className={cn(
-              'rounded-lg border p-6 sticky top-24 transition-colors duration-200',
-              sidebarBgClass
-            )}>
-              <h2 className={cn(
-                'text-lg font-semibold mb-4',
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              )}>
-                Categories
-              </h2>
-              <CategoryFilter
-                categories={categoriesData || []}
-                selectedCategoryId={selectedCategoryId}
-                onSelectCategory={handleCategoryChange}
-                isLoading={categoriesLoading}
-              />
-            </div>
-          </div>
 
-          {/* Products Section */}
-          <div className="lg:col-span-3">
-            {/* Search Bar */}
-            <div className="mb-8">
-              <SearchBar
-                onSearch={handleSearch}
-                isLoading={productsLoading}
-                placeholder="Search products in this shop..."
-              />
-            </div>
+        {/* Search */}
+        <div className="mb-6">
+          <SearchBar
+            onSearch={handleSearch}
+            isLoading={productsLoading}
+            placeholder="Search products in this shop..."
+          />
+        </div>
 
-            {/* Filters Info */}
-            {(searchQuery || selectedCategoryId) && (
-              <div className={cn(
-                'mb-6 flex items-center gap-2 text-sm transition-colors duration-200',
-                filterTextClass
+        {/* Active filter chips */}
+        {isFiltering && (
+          <div className={cn(
+            'mb-6 flex items-center gap-2 text-sm transition-colors duration-200',
+            filterTextClass
+          )}>
+            <span>Filters:</span>
+            {searchQuery && (
+              <span className={cn(
+                'inline-flex items-center gap-1 px-3 py-1 rounded-full',
+                theme === 'dark'
+                  ? 'bg-warm-600/20 text-warm-300'
+                  : 'bg-warm-100 text-warm-700'
               )}>
-                <span>
-                  Filters:
-                  {searchQuery && (
-                    <span className={cn(
-                      'ml-2 inline-block px-3 py-1 rounded-full',
-                      theme === 'dark'
-                        ? 'bg-warm-600/20 text-warm-300'
-                        : 'bg-warm-100 text-warm-700'
-                    )}>
-                      Search: "{searchQuery}"
-                      <button
-                        onClick={() => handleSearch('')}
-                        className="ml-1 hover:opacity-70"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {selectedCategoryId && (
-                    <span className={cn(
-                      'ml-2 inline-block px-3 py-1 rounded-full',
-                      theme === 'dark'
-                        ? 'bg-gold-600/20 text-gold-300'
-                        : 'bg-gold-100 text-gold-700'
-                    )}>
-                      {
-                        categoriesData?.find((c) => c.id === selectedCategoryId)
-                          ?.name
-                      }
-                      <button
-                        onClick={() => handleCategoryChange(undefined)}
-                        className="ml-1 hover:opacity-70"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                </span>
-              </div>
+                Search: &quot;{searchQuery}&quot;
+                <button onClick={() => handleSearch('')} className="hover:opacity-70 ml-1">×</button>
+              </span>
             )}
+            {selectedCategoryId && (
+              <span className={cn(
+                'inline-flex items-center gap-1 px-3 py-1 rounded-full',
+                theme === 'dark'
+                  ? 'bg-gold-600/20 text-gold-300'
+                  : 'bg-gold-100 text-gold-700'
+              )}>
+                {categoriesData?.find((c) => c.id === selectedCategoryId)?.name}
+                <button onClick={() => handleCategoryChange(undefined)} className="hover:opacity-70 ml-1">×</button>
+              </span>
+            )}
+          </div>
+        )}
 
-            {/* Products Grid */}
-            <ProductGrid
-              products={paginatedProducts}
+        {/* ── Collection carousels (hidden while a filter is active) ───────── */}
+        {hasCollections && (
+          <div className="mb-12">
+            <CollectionsSection
+              collections={collectionsData!}
               shopId={shopData?.id || ''}
               shopToken={token}
-              isLoading={productsLoading}
+              isLoading={collectionsLoading}
             />
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-12 flex justify-center gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.max(1, p - 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  ← Previous
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {[...Array(totalPages)].map((_, i) => {
-                    const pageNum = i + 1
-                    // Show first, last, and pages around current
-                    if (
-                      pageNum === 1 ||
-                      pageNum === totalPages ||
-                      Math.abs(pageNum - currentPage) <= 1
-                    ) {
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={
-                            currentPage === pageNum ? 'primary' : 'secondary'
-                          }
-                          onClick={() => setCurrentPage(pageNum)}
-                          size="sm"
-                        >
-                          {pageNum}
-                        </Button>
-                      )
-                    }
-                    if (Math.abs(pageNum - currentPage) === 2) {
-                      return <span key={pageNum}>...</span>
-                    }
-                    return null
-                  })}
-                </div>
-
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Next →
-                </Button>
-              </div>
-            )}
           </div>
-        </div>
+        )}
+
+        {/* Skeleton placeholder while collections load (no filter active) */}
+        {!isFiltering && collectionsLoading && (
+          <div className="mb-12">
+            <CollectionsSection
+              collections={[]}
+              shopId=""
+              shopToken={token}
+              isLoading
+            />
+          </div>
+        )}
+
+        {/* ── "All Products" divider when collections are visible ──────────── */}
+        {hasCollections && (
+          <div className="flex items-center gap-4 mb-6">
+            <div className={cn(
+              'flex-1 h-px',
+              theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'
+            )} />
+            <span className={cn(
+              'text-sm font-semibold px-3 py-1 rounded-full',
+              theme === 'dark'
+                ? 'bg-slate-800 text-slate-300'
+                : 'bg-white text-gray-500 border border-gray-200'
+            )}>
+              All Products
+            </span>
+            <div className={cn(
+              'flex-1 h-px',
+              theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'
+            )} />
+          </div>
+        )}
+
+        {/* ── Product grid ─────────────────────────────────────────────────── */}
+        <ProductGrid
+          products={paginatedProducts}
+          shopId={shopData?.id || ''}
+          shopToken={token}
+          isLoading={productsLoading}
+        />
+
+        {/* ── Pagination ───────────────────────────────────────────────────── */}
+        {totalPages > 1 && (
+          <div className="mt-12 flex justify-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              ← Previous
+            </Button>
+            <div className="flex items-center gap-2">
+              {[...Array(totalPages)].map((_, i) => {
+                const pageNum = i + 1
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  Math.abs(pageNum - currentPage) <= 1
+                ) {
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'primary' : 'secondary'}
+                      onClick={() => setCurrentPage(pageNum)}
+                      size="sm"
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                }
+                if (Math.abs(pageNum - currentPage) === 2) {
+                  return (
+                    <span key={pageNum} className={filterTextClass}>...</span>
+                  )
+                }
+                return null
+              })}
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next →
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

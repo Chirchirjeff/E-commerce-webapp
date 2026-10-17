@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCartStore } from '@/stores/cartStore'
 import { useCheckoutStore } from '@/stores/checkoutStore'
+import { useAuthStore } from '@/stores/authStore'
 import { mpesaAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
@@ -41,6 +42,8 @@ export default function PaymentPage() {
   const shopId   = useCartStore((state) => state.shopId)
 
   const delivery            = useCheckoutStore((state) => state.delivery)
+  const deliveryBuyerId     = useCheckoutStore((state) => state.deliveryBuyerId)
+  const buyerId             = useAuthStore((state) => state.user?.id)
   const savedPhone          = useCheckoutStore((state) => state.mpesaPhone)
   const setMpesaPhone       = useCheckoutStore((state) => state.setMpesaPhone)
   const setCheckoutRequestId = useCheckoutStore((state) => state.setCheckoutRequestId)
@@ -53,10 +56,10 @@ export default function PaymentPage() {
 
   // Guard: must have delivery details
   useEffect(() => {
-    if (!delivery) router.replace('/checkout/delivery')
-  }, [delivery, router])
+    if (!delivery || deliveryBuyerId !== buyerId) router.replace('/checkout/delivery')
+  }, [delivery, deliveryBuyerId, buyerId, router])
 
-  if (!delivery || items.length === 0) return null
+  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return null
 
   const total = getTotal()
 

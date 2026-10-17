@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider, MutationCache, QueryCache } from '@tanstack/react-query'
 import { ReactNode, useEffect } from 'react'
 import { ThemeProvider } from '@/context/ThemeContext'
+import { useAuthStore } from '@/stores/authStore'
+import { useCheckoutStore } from '@/stores/checkoutStore'
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -50,11 +52,38 @@ function GlobalErrorListeners() {
   return null
 }
 
+/** Clears browser-held buyer context as soon as its configured session ends. */
+function BuyerSessionExpiry() {
+  const expiresAt = useAuthStore((state) => state.sessionExpiresAt)
+  const signOut = useAuthStore((state) => state.signOut)
+
+  useEffect(() => {
+    if (!expiresAt) return
+    const expire = () => {
+      signOut()
+      useCheckoutStore.getState().clearBuyerDetails()
+    }
+    const delay = expiresAt - Date.now()
+    if (delay <= 0) { expire(); return }
+    const timeout = window.setTimeout(expire, delay)
+    return () => window.clearTimeout(timeout)
+  }, [expiresAt, signOut])
+
+  useEffect(() => {
+    // Remove the indefinitely-persisted authentication record left by older
+    // releases. New sessions are stored only in sessionStorage.
+    window.localStorage.removeItem('buyer-auth-storage')
+  }, [])
+
+  return null
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <GlobalErrorListeners />
+        <BuyerSessionExpiry />
         {children}
       </QueryClientProvider>
     </ThemeProvider>

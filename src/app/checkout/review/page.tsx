@@ -9,19 +9,22 @@ import { useCheckoutStore } from '@/stores/checkoutStore'
 import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
+import { useAuthStore } from '@/stores/authStore'
 
 export default function ReviewPage() {
   const router   = useRouter()
   const items    = useCartStore((state) => state.items)
   const getTotal = useCartStore((state) => state.getTotal)
   const delivery = useCheckoutStore((state) => state.delivery)
+  const deliveryBuyerId = useCheckoutStore((state) => state.deliveryBuyerId)
+  const buyerId = useAuthStore((state) => state.user?.id)
 
   // Guard: must have delivery details
   useEffect(() => {
-    if (!delivery) router.replace('/checkout/delivery')
-  }, [delivery, router])
+    if (!delivery || deliveryBuyerId !== buyerId) router.replace('/checkout/delivery')
+  }, [delivery, deliveryBuyerId, buyerId, router])
 
-  if (!delivery || items.length === 0) return null
+  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return null
 
   const total = getTotal()
 

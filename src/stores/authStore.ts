@@ -1,5 +1,9 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+
+// Buyer sessions are deliberately short-lived on shared devices. Change this
+// value if the checkout needs a different inactivity window.
+export const BUYER_SESSION_DURATION_MS = 30 * 60 * 1000
 
 export interface BuyerAddress {
   id?: string
@@ -25,6 +29,7 @@ export interface BuyerProfile {
 interface AuthState {
   token: string | null
   user: BuyerProfile | null
+  sessionExpiresAt: number | null
   setSession: (token: string, user: BuyerProfile) => void
   setUser: (user: BuyerProfile) => void
   signOut: () => void
@@ -35,10 +40,20 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
-      setSession: (token, user) => set({ token, user }),
+      sessionExpiresAt: null,
+      setSession: (token, user) => set({ token, user, sessionExpiresAt: Date.now() + BUYER_SESSION_DURATION_MS }),
       setUser: (user) => set({ user }),
-      signOut: () => set({ token: null, user: null }),
+      signOut: () => set({ token: null, user: null, sessionExpiresAt: null }),
     }),
-    { name: 'buyer-auth-storage' },
+    {
+      name: 'buyer-auth-storage',
+      // Session storage is cleared when the browser tab is closed, unlike the
+      // previous localStorage implementation which retained buyer data until
+      // it was explicitly overwritten.
+      storage: createJSONStorage(() => sessionStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state?.sessionExpiresAt && state.sessionExpiresAt <= Date.now()) state.signOut()
+      },
+    },
   ),
 )

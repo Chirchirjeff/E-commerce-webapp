@@ -40,7 +40,7 @@ export function ProductCardCarousel({
   // No images available
   if (normalizedImages.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+      <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 dark:text-slate-500 dark:bg-slate-800">
         <svg
           className="w-12 h-12"
           fill="none"
@@ -61,7 +61,7 @@ export function ProductCardCarousel({
   return (
     <div
       onClick={onCardClick}
-      className="relative w-full h-full bg-gray-100 overflow-hidden cursor-pointer group"
+      className="relative w-full h-full bg-gray-100 dark:bg-slate-800 overflow-hidden cursor-pointer group"
     >
       <Image
         src={normalizedImages[currentImageIndex]}

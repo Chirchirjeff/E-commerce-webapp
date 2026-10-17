@@ -30,6 +30,7 @@ export default function DeliveryPage() {
   const getTotal   = useCartStore((state) => state.getTotal)
   const cartShopToken = useCartStore((state) => state.shopToken)
   const saved      = useCheckoutStore((state) => state.delivery)
+  const deliveryBuyerId = useCheckoutStore((state) => state.deliveryBuyerId)
   const setDelivery = useCheckoutStore((state) => state.setDelivery)
   const setShopToken = useCheckoutStore((state) => state.setShopToken)
   const { token, user, setUser } = useAuthStore()
@@ -49,14 +50,16 @@ export default function DeliveryPage() {
 
   useEffect(() => {
     if (!token) { router.replace('/checkout/account'); return }
-    if (saved || !user) return
+    // Delivery details are sensitive and may only be reused for the buyer who
+    // entered them. Legacy saved details have no owner and are ignored.
+    if ((saved && deliveryBuyerId === user?.id) || !user) return
     const address = user.addresses.find((item) => item.isDefault) ?? user.addresses[0]
     setForm({
       customerName: user.name || address?.recipientName || '', customerEmail: user.email || '',
       customerPhone: user.phone || address?.phone || '', deliveryAddress: address?.addressLine || '',
       deliveryCity: address?.city || '', deliveryState: address?.state || '', deliveryZip: address?.postalCode || '',
     })
-  }, [token, user, saved, router])
+  }, [token, user, saved, deliveryBuyerId, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -66,6 +69,7 @@ export default function DeliveryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) { router.replace('/checkout/account'); return }
     const errs = validate(form)
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     try {
@@ -75,7 +79,7 @@ export default function DeliveryPage() {
         postalCode: form.deliveryZip, isDefault: true,
       })
       if (user) setUser({ ...user, name: form.customerName, phone: form.customerPhone, addresses: [result.data.address, ...user.addresses.filter((item) => item.id !== result.data.address.id).map((item) => ({ ...item, isDefault: false }))] })
-      setDelivery(form)
+      setDelivery(form, user.id)
     } catch {
       setErrors({ form: 'We could not save your delivery address. Please try again.' })
       return

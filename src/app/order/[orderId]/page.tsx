@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
-import { ordersAPI } from '@/lib/api'
+import { ordersAPI, reviewsAPI } from '@/lib/api'
 import { formatPrice, formatDate } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { Order } from '@/types'
@@ -257,6 +257,191 @@ function Timeline({ status }: { status: string }) {
         )
       })}
     </ol>
+  )
+}
+
+// ─── Per-item review widget ───────────────────────────────────────────────────
+
+/**
+ * Shows a compact star-picker for one order item.
+ * Checks via GET /reviews/can-review/:productId whether this buyer can review
+ * this product. If yes, shows the form. If they already reviewed it, shows
+ * a "Thanks for your review" message.
+ */
+function ItemReviewWidget({ productId, productName }: { productId: string; productName: string }) {
+  const [rating, setRating]       = useState(0)
+  const [hover, setHover]         = useState(0)
+  const [comment, setComment]     = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+
+  // Check eligibility on mount
+  const { data: canReviewData, isLoading } = useQuery({
+    queryKey: ['can-review', productId],
+    queryFn: async () => {
+      const res = await reviewsAPI.canReview(productId)
+      return res.data as { canReview: boolean; hasReviewed: boolean; hasPurchased: boolean }
+    },
+    staleTime: 1000 * 30,
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (rating === 0) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await reviewsAPI.create({ productId, rating, comment: comment || undefined })
+      setSubmitted(true)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message
+      setError(typeof msg === 'string' ? msg : 'Could not submit review. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Still loading eligibility
+  if (isLoading) return null
+
+  // Already reviewed before landing on this page
+  if (canReviewData?.hasReviewed && !submitted) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 w-fit">
+        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        You reviewed this product
+      </div>
+    )
+  }
+
+  // Not eligible (shouldn't happen here since payment just succeeded, but guard anyway)
+  if (!canReviewData?.canReview && !submitted) return null
+
+  // Successfully submitted just now
+  if (submitted) {
+    return (
+      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium w-fit">
+        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        Thank you! Your review has been submitted.
+      </div>
+    )
+  }
+
+  const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
+  const displayStar  = hover || rating
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+      <p className="text-xs font-semibold text-amber-800">
+        How would you rate <span className="italic">{productName}</span>?
+      </p>
+
+      {/* Star picker */}
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onMouseEnter={() => setHover(star)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => setRating(star)}
+            aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+            className="focus:outline-none"
+          >
+            <svg
+              className={`w-7 h-7 transition-colors ${
+                displayStar >= star ? 'text-green-500 fill-green-500' : 'text-gray-300 fill-gray-200'
+              }`}
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.446a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.539 1.118l-3.368-2.446a1 1 0 00-1.176 0l-3.368 2.446c-.784.57-1.838-.197-1.539-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.063 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+            </svg>
+          </button>
+        ))}
+        {displayStar > 0 && (
+          <span className="ml-2 text-xs text-amber-700 font-medium">{ratingLabels[displayStar]}</span>
+        )}
+      </div>
+
+      {/* Comment */}
+      {rating > 0 && (
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Share what you liked or didn't like (optional)"
+          rows={2}
+          className="w-full text-sm rounded-lg border border-amber-300 bg-white px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+        />
+      )}
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={rating === 0 || submitting}
+        className="text-sm font-semibold px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        {submitting ? 'Submitting…' : 'Submit Review'}
+      </button>
+    </form>
+  )
+}
+
+// ─── Section wrapping all per-item review widgets ────────────────────────────
+
+function ReviewSection({ order }: { order: Order }) {
+  const items = order.items ?? []
+  const reviewableItems = items.filter((item) => item.productId && item.product)
+
+  if (reviewableItems.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-1">
+        {/* Star icon */}
+        <svg className="w-4 h-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.446a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.539 1.118l-3.368-2.446a1 1 0 00-1.176 0l-3.368 2.446c-.784.57-1.838-.197-1.539-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.063 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+        </svg>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+          Review Your Purchase
+        </h2>
+      </div>
+      <p className="text-xs text-gray-400 mb-5">
+        Your feedback helps other buyers — takes less than a minute.
+      </p>
+
+      <div className="space-y-5">
+        {reviewableItems.map((item) => (
+          <div key={item.productId} className="space-y-3">
+            {/* Product mini-header */}
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-lg bg-gray-100 shrink-0 overflow-hidden">
+                {item.product?.thumbnailUrl ? (
+                  <Image src={item.product.thumbnailUrl} alt={item.product.name ?? ''} fill className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-medium text-gray-900 truncate">{item.product?.name ?? 'Product'}</p>
+            </div>
+
+            <ItemReviewWidget
+              productId={item.productId}
+              productName={item.product?.name ?? 'this product'}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -550,9 +735,11 @@ export default function OrderTrackingPage() {
             </div>
           </div>
 
+          {/* Review prompt — visible after payment, one widget per item */}
+          <ReviewSection order={order} />
+
           {/* Delivery address */}
-          {hasDelivery && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+          {hasDelivery && (            <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                 Delivery Address
               </h2>

@@ -29,7 +29,7 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
       {/* Cover Image */}
       {shop.coverPhoto ? (
         <div className={cn(
-          'relative w-full h-40 sm:h-56 md:h-64 bg-gradient-to-br overflow-hidden',
+          'relative w-full h-48 sm:h-64 md:h-80 lg:h-96 bg-gradient-to-br overflow-hidden',
           theme === 'dark'
             ? 'from-slate-800 to-slate-900'
             : 'from-warm-100 to-gold-100'
@@ -38,7 +38,8 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
             src={shop.coverPhoto}
             alt={shop.name}
             fill
-            className="object-cover"
+            sizes="100vw"
+            className="object-cover object-center"
             priority
           />
           {/* Overlay for dark theme */}
@@ -48,7 +49,7 @@ export function ShopHeader({ shop }: ShopHeaderProps) {
         </div>
       ) : (
         <div className={cn(
-          'relative w-full h-40 sm:h-56 md:h-64 bg-gradient-to-br',
+          'relative w-full h-48 sm:h-64 md:h-80 lg:h-96 bg-gradient-to-br',
           theme === 'dark'
             ? 'from-warm-900/20 to-gold-900/20 border-b border-slate-700'
             : 'from-warm-50 to-gold-100 border-b border-warm-200'

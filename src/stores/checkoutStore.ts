@@ -41,7 +41,15 @@ export const useCheckoutStore = create<CheckoutState>()(
       orderNumber: null,
       shopToken: null,
 
-      setDelivery: (details, buyerId) => set({ delivery: details, deliveryBuyerId: buyerId }),
+      // When the buyer edits their phone (e.g. after a failed payment), drop the
+      // M-Pesa number remembered from the previous attempt so the payment page
+      // pre-fills the updated number instead of re-prompting the old one.
+      setDelivery: (details, buyerId) =>
+        set((state) => ({
+          delivery: details,
+          deliveryBuyerId: buyerId,
+          mpesaPhone: state.delivery?.customerPhone === details.customerPhone ? state.mpesaPhone : '',
+        })),
       setMpesaPhone: (phone) => set({ mpesaPhone: phone }),
       setCheckoutRequestId: (id) => set({ checkoutRequestId: id }),
       setOrderNumber: (num) => set({ orderNumber: num }),

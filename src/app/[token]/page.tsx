@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ShopHeader } from '@/components/layout/ShopHeader'
-import { ShopLayoutHeader } from '@/components/layout/ShopLayoutHeader'
+import { ChevronLeft, ChevronRight, Sparkles, Store, X } from 'lucide-react'
+import { ShopHeader, ShopHeaderSkeleton } from '@/components/layout/ShopHeader'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { CategoryBar } from '@/components/products/CategoryBar'
 import { SearchBar } from '@/components/products/SearchBar'
 import { CollectionsSection } from '@/components/collections/CollectionCarousel'
-import Button from '@/components/ui/Button'
-import { useTheme } from '@/context/ThemeContext'
 import { useShopCategories } from '@/hooks/useShopCategories'
 import { useShopCollections } from '@/hooks/useShopCollections'
 import { shopAPI, productsAPI } from '@/lib/api'
@@ -21,7 +19,6 @@ export default function StorefrontPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const token = params.token as string
-  const { theme } = useTheme()
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(
     searchParams.get('category') || undefined
@@ -108,32 +105,15 @@ export default function StorefrontPage() {
   // ── Error state ────────────────────────────────────────────────────────────
   if (shopError) {
     return (
-      <div className={cn(
-        'min-h-screen flex items-center justify-center transition-colors duration-200',
-        theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
-      )}>
-        <div className="text-center">
-          <svg
-            className="w-16 h-16 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            style={{ color: theme === 'dark' ? '#ef4444' : '#dc2626' }}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h1 className={cn(
-            'text-2xl font-bold mb-2',
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          )}>
+      <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-b from-warm-50/60 to-white px-4 dark:from-slate-950 dark:to-slate-950">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 ring-8 ring-red-50/50 dark:bg-red-500/10 dark:ring-red-500/5">
+            <Store className="h-9 w-9 text-red-500" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             Shop Not Found
           </h1>
-          <p className={theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}>
+          <p className="mt-2 text-gray-600 dark:text-slate-400">
             The shop you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
         </div>
@@ -141,92 +121,61 @@ export default function StorefrontPage() {
     )
   }
 
-  // ── Loading skeleton ───────────────────────────────────────────────────────
-  if (shopLoading) {
-    return (
-      <div className={cn(
-        'min-h-screen animate-pulse',
-        theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
-      )}>
-        <div className={cn('h-64', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-4">
-          <div className={cn('h-8 w-1/3', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
-          <div className={cn('h-4 w-1/2', theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200')} />
-        </div>
-      </div>
-    )
+  const activeCategoryName = categoriesData?.find((c) => c.id === selectedCategoryId)?.name
+  const sectionTitle = searchQuery
+    ? `Results for “${searchQuery}”`
+    : activeCategoryName || 'All Products'
+
+  // Compact page list: first, last, and neighbours of the current page
+  const pageItems: (number | 'gap')[] = []
+  for (let n = 1; n <= totalPages; n++) {
+    if (n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1) pageItems.push(n)
+    else if (pageItems[pageItems.length - 1] !== 'gap') pageItems.push('gap')
   }
 
-  const filterTextClass = theme === 'dark' ? 'text-slate-300' : 'text-gray-600'
+  const goToPage = (n: number) => {
+    setCurrentPage(n)
+    document.getElementById('shop-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const pageBtn =
+    'inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-semibold transition disabled:pointer-events-none disabled:opacity-40'
+  const pageBtnIdle =
+    'bg-white text-gray-700 ring-1 ring-inset ring-gray-200 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800'
 
   return (
-    <div className={cn(
-      'min-h-screen transition-colors duration-200',
-      theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
-    )}>
-      {/* Shop cover + logo */}
-      {shopData && <ShopHeader shop={shopData} />}
-
-      {/* Stats bar */}
-      {shopData && (
-        <ShopLayoutHeader
-          shopName={shopData.name}
+    <div className="min-h-screen bg-gradient-to-b from-warm-50/40 via-gray-50 to-gray-50 transition-colors duration-200 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
+      {/* ── Hero: cover + identity card ─────────────────────────────────────── */}
+      {shopLoading || !shopData ? (
+        <ShopHeaderSkeleton />
+      ) : (
+        <ShopHeader
+          shop={shopData}
           productCount={products.length}
           categoryCount={categoriesData?.length || 0}
         />
       )}
 
-      {/* Sticky category strip */}
-      <CategoryBar
-        categories={categoriesData || []}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={handleCategoryChange}
-        isLoading={categoriesLoading}
-      />
-
-      {/* ── Main content ────────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Search */}
-        <div className="mb-6">
+      {/* ── Sticky toolbar: search + categories (sits below the 64px site header) ── */}
+      <div className="sticky top-16 z-30 mt-6 border-y border-gray-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-3 sm:px-6 lg:px-8">
           <SearchBar
             onSearch={handleSearch}
-            isLoading={productsLoading}
+            isLoading={productsLoading && !!searchQuery}
             placeholder="Search products in this shop..."
+            value={searchQuery}
+          />
+          <CategoryBar
+            categories={categoriesData || []}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={handleCategoryChange}
+            isLoading={categoriesLoading || shopLoading}
           />
         </div>
+      </div>
 
-        {/* Active filter chips */}
-        {isFiltering && (
-          <div className={cn(
-            'mb-6 flex items-center gap-2 text-sm transition-colors duration-200',
-            filterTextClass
-          )}>
-            <span>Filters:</span>
-            {searchQuery && (
-              <span className={cn(
-                'inline-flex items-center gap-1 px-3 py-1 rounded-full',
-                theme === 'dark'
-                  ? 'bg-warm-600/20 text-warm-300'
-                  : 'bg-warm-100 text-warm-700'
-              )}>
-                Search: &quot;{searchQuery}&quot;
-                <button onClick={() => handleSearch('')} className="hover:opacity-70 ml-1">×</button>
-              </span>
-            )}
-            {selectedCategoryId && (
-              <span className={cn(
-                'inline-flex items-center gap-1 px-3 py-1 rounded-full',
-                theme === 'dark'
-                  ? 'bg-gold-600/20 text-gold-300'
-                  : 'bg-gold-100 text-gold-700'
-              )}>
-                {categoriesData?.find((c) => c.id === selectedCategoryId)?.name}
-                <button onClick={() => handleCategoryChange(undefined)} className="hover:opacity-70 ml-1">×</button>
-              </span>
-            )}
-          </div>
-        )}
+      {/* ── Main content ────────────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
         {/* ── Collection carousels (hidden while a filter is active) ───────── */}
         {hasCollections && (
@@ -252,81 +201,98 @@ export default function StorefrontPage() {
           </div>
         )}
 
-        {/* ── "All Products" divider when collections are visible ──────────── */}
-        {hasCollections && (
-          <div className="flex items-center gap-4 mb-6">
-            <div className={cn(
-              'flex-1 h-px',
-              theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'
-            )} />
-            <span className={cn(
-              'text-sm font-semibold px-3 py-1 rounded-full',
-              theme === 'dark'
-                ? 'bg-slate-800 text-slate-300'
-                : 'bg-white text-gray-500 border border-gray-200'
-            )}>
-              All Products
-            </span>
-            <div className={cn(
-              'flex-1 h-px',
-              theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'
-            )} />
+        {/* ── Section heading + active filter chips ────────────────────────── */}
+        <div id="shop-products" className="mb-6 flex scroll-mt-48 flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
+              {!isFiltering && <Sparkles className="h-5 w-5 text-gold-500" aria-hidden="true" />}
+              {sectionTitle}
+            </h2>
+            {!productsLoading && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+                {products.length} item{products.length !== 1 ? 's' : ''}
+                {totalPages > 1 && ` · Page ${currentPage} of ${totalPages}`}
+              </p>
+            )}
           </div>
-        )}
+
+          {isFiltering && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warm-100 py-1 pl-3 pr-1 font-medium text-warm-700 dark:bg-warm-500/15 dark:text-warm-300">
+                  “{searchQuery}”
+                  <button
+                    onClick={() => handleSearch('')}
+                    className="rounded-full p-0.5 hover:bg-warm-200/70 dark:hover:bg-warm-500/20"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              )}
+              {activeCategoryName && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 py-1 pl-3 pr-1 font-medium text-gold-800 dark:bg-gold-500/15 dark:text-gold-300">
+                  {activeCategoryName}
+                  <button
+                    onClick={() => handleCategoryChange(undefined)}
+                    className="rounded-full p-0.5 hover:bg-gold-200/70 dark:hover:bg-gold-500/20"
+                    aria-label="Clear category"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Product grid ─────────────────────────────────────────────────── */}
         <ProductGrid
           products={paginatedProducts}
           shopId={shopData?.id || ''}
           shopToken={token}
-          isLoading={productsLoading}
+          isLoading={productsLoading || shopLoading}
         />
 
         {/* ── Pagination ───────────────────────────────────────────────────── */}
         {totalPages > 1 && (
-          <div className="mt-12 flex justify-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          <nav className="mt-12 flex items-center justify-center gap-2" aria-label="Pagination">
+            <button
+              onClick={() => goToPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
+              className={cn(pageBtn, pageBtnIdle)}
+              aria-label="Previous page"
             >
-              ← Previous
-            </Button>
-            <div className="flex items-center gap-2">
-              {[...Array(totalPages)].map((_, i) => {
-                const pageNum = i + 1
-                if (
-                  pageNum === 1 ||
-                  pageNum === totalPages ||
-                  Math.abs(pageNum - currentPage) <= 1
-                ) {
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? 'primary' : 'secondary'}
-                      onClick={() => setCurrentPage(pageNum)}
-                      size="sm"
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                }
-                if (Math.abs(pageNum - currentPage) === 2) {
-                  return (
-                    <span key={pageNum} className={filterTextClass}>...</span>
-                  )
-                }
-                return null
-              })}
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {pageItems.map((item, i) =>
+              item === 'gap' ? (
+                <span key={`gap-${i}`} className="px-1 text-gray-400 dark:text-slate-500">…</span>
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => goToPage(item)}
+                  aria-current={item === currentPage ? 'page' : undefined}
+                  className={cn(
+                    pageBtn,
+                    item === currentPage
+                      ? 'bg-gray-900 text-white shadow-md dark:bg-white dark:text-slate-900'
+                      : pageBtnIdle
+                  )}
+                >
+                  {item}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
+              className={cn(pageBtn, pageBtnIdle)}
+              aria-label="Next page"
             >
-              Next →
-            </Button>
-          </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </nav>
         )}
       </div>
     </div>

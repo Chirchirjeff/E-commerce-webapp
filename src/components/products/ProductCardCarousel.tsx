@@ -67,13 +67,14 @@ export function ProductCardCarousel({
         src={normalizedImages[currentImageIndex]}
         alt={productName}
         fill
-        className="object-cover group-hover:scale-105 transition-transform duration-500"
+        sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
         priority={false}
       />
 
       {/* Image indicator - subtle dot at bottom for multi-image cards only */}
       {hasMultiple && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {normalizedImages.map((_, index) => (
             <div
               key={index}
@@ -85,12 +86,8 @@ export function ProductCardCarousel({
         </div>
       )}
 
-      {/* Click to expand hint */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="text-white text-sm font-medium bg-black/60 px-3 py-1 rounded">
-          Click to expand
-        </span>
-      </div>
+      {/* Soft gradient so badges and the quick-view button stay legible */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/25 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
     </div>
   )
 }

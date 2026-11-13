@@ -10,6 +10,7 @@ import { mpesaAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
+import { CheckoutReviewSkeleton } from '@/components/skeletons/PageSkeletons'
 
 /**
  * Validate a Kenyan phone number.
@@ -59,7 +60,7 @@ export default function PaymentPage() {
     if (!delivery || deliveryBuyerId !== buyerId) router.replace('/checkout/delivery')
   }, [delivery, deliveryBuyerId, buyerId, router])
 
-  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return null
+  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return <CheckoutReviewSkeleton />
 
   const total = getTotal()
 

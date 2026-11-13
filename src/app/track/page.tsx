@@ -8,11 +8,14 @@ import { formatDate, formatPrice } from '@/lib/utils'
 import { Order } from '@/types'
 import Button from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/authStore'
+import { useShopHref } from '@/hooks/useShopHref'
+import { TrackLookupSkeleton } from '@/components/skeletons/PageSkeletons'
 
 function TrackByOrderNumberPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = useAuthStore((state) => state.token)
+  const shopHref = useShopHref()
   const [orderNumber, setOrderNumber] = useState(searchParams.get('orderNumber') ?? '')
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState('')
@@ -87,14 +90,14 @@ function TrackByOrderNumberPageContent() {
         </section>
       )}
 
-      <Link href="/" className="mt-6 block text-center text-sm text-primary-600">Continue shopping</Link>
+      <Link href={shopHref} className="mt-6 block text-center text-sm text-primary-600">Continue shopping</Link>
     </main>
   )
 }
 
 export default function TrackByOrderNumberPage() {
   return (
-    <Suspense fallback={<main className="max-w-3xl mx-auto px-4 py-12 text-center text-gray-500">Loading order tracking…</main>}>
+    <Suspense fallback={<TrackLookupSkeleton />}>
       <TrackByOrderNumberPageContent />
     </Suspense>
   )

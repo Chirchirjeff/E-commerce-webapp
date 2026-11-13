@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button'
 import { productsAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { ProductDetail } from '@/types'
+import { ProductDetailSkeleton } from '@/components/skeletons/PageSkeletons'
 
 export default function ProductDetailsPage() {
   const params = useParams()
@@ -62,26 +63,7 @@ export default function ProductDetailsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Image skeleton */}
-            <div className="aspect-square bg-gray-200 rounded-lg animate-pulse" />
-
-            {/* Details skeleton */}
-            <div className="space-y-4">
-              <div className="h-8 bg-gray-200 w-3/4 rounded animate-pulse" />
-              <div className="h-6 bg-gray-200 w-1/4 rounded animate-pulse" />
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 bg-gray-200 rounded animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <ProductDetailSkeleton />
   }
 
   if (!product) {

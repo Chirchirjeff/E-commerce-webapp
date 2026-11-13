@@ -38,6 +38,7 @@ import { ShopCollection, CollectionProduct } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatPrice } from '@/lib/utils'
 import { normalizeProductImages } from '@/lib/image-utils'
+import { CollectionsSkeleton } from '@/components/skeletons/PageSkeletons'
 import { useTheme } from '@/context/ThemeContext'
 
 // ─── Theme map ────────────────────────────────────────────────────────────────
@@ -288,34 +289,6 @@ function CollectionProductCard({ product, shopId, shopToken, theme, isDark, inde
   )
 }
 
-// ─── Skeleton loader ──────────────────────────────────────────────────────────
-
-function CarouselSkeleton() {
-  return (
-    <div className="space-y-4 py-6">
-      {/* Header skeleton */}
-      <div className="h-14 rounded-xl bg-gray-200 dark:bg-slate-700 animate-pulse w-72" />
-      {/* Cards row */}
-      <div className="flex gap-4 overflow-hidden">
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="flex-shrink-0 w-[200px] rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700 animate-pulse"
-            style={{ animationDelay: `${i * 80}ms` }}
-          >
-            <div className="h-44" />
-            <div className="p-3 space-y-2">
-              <div className="h-3 rounded bg-gray-300 dark:bg-slate-600 w-4/5" />
-              <div className="h-3 rounded bg-gray-300 dark:bg-slate-600 w-3/5" />
-              <div className="h-4 rounded bg-gray-300 dark:bg-slate-600 w-2/5 mt-1" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface CollectionCarouselProps {
@@ -531,12 +504,7 @@ export function CollectionsSection({
   isLoading,
 }: CollectionsSectionProps) {
   if (isLoading) {
-    return (
-      <div className="space-y-10">
-        <CarouselSkeleton />
-        <CarouselSkeleton />
-      </div>
-    )
+    return <CollectionsSkeleton />
   }
 
   if (!collections || collections.length === 0) return null

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productLinksAPI } from '@/lib/api'
+import { ProductDetailSkeleton } from '@/components/skeletons/PageSkeletons'
 
 /**
  * Product Link Resolution Page
@@ -58,33 +59,8 @@ export default function ProductLinkPage() {
   }, [token, router])
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block">
-            <svg
-              className="w-12 h-12 text-primary-600 animate-spin"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6h-6m0 0H6"
-              />
-            </svg>
-          </div>
-          <h1 className="mt-4 text-lg font-semibold text-gray-900">
-            Loading product...
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Please wait while we redirect you
-          </p>
-        </div>
-      </div>
-    )
+    // The link resolves to a product page, so preview that layout while we redirect.
+    return <ProductDetailSkeleton label="Opening product…" />
   }
 
   if (error) {

@@ -1,25 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
-import { useCheckoutStore } from '@/stores/checkoutStore'
+import { useSwitchAccount } from '@/hooks/useSwitchAccount'
 import { useTheme } from '@/context/ThemeContext'
 
 export function Header() {
-  const router = useRouter()
   const buyer = useAuthStore((state) => state.user)
-  const signOut = useAuthStore((state) => state.signOut)
+  const { switchAccount } = useSwitchAccount()
   const itemCount = useCartStore((state) => state.getItemCount())
   const shopToken = useCartStore((state) => state.shopToken)
   const { theme, toggleTheme } = useTheme()
-
-  const switchAccount = () => {
-    signOut()
-    useCheckoutStore.getState().clearBuyerDetails()
-    router.push('/checkout/account')
-  }
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 transition-colors duration-200">
@@ -74,9 +66,17 @@ export function Header() {
             </button>
 
             {buyer ? (
-              <button onClick={switchAccount} className="px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title="Sign out and use a different buyer account">
-                Switch account
-              </button>
+              <>
+                <Link href="/account" className="flex items-center gap-2 px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title="Your account and delivery addresses">
+                  <span className="w-7 h-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold" aria-hidden="true">
+                    {(buyer.name || buyer.email).charAt(0).toUpperCase()}
+                  </span>
+                  <span className="hidden sm:inline max-w-[8rem] truncate">{buyer.name?.split(' ')[0] || 'Account'}</span>
+                </Link>
+                <button onClick={() => switchAccount()} className="hidden md:inline px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title="Sign out and let someone else sign in">
+                  Switch account
+                </button>
+              </>
             ) : (
               <Link href="/checkout/account" className="px-2 py-2 text-sm text-gray-600 hover:text-primary-600">Sign in</Link>
             )}

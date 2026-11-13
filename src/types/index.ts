@@ -137,6 +137,8 @@ export interface Order {
   createdAt: string
   updatedAt: string
   shop?: { id: string; name: string }
+  /** Link token of the shop this order came from — storefront lives at /:shopToken */
+  shopToken?: string | null
   mpesaReceiptNumber?: string | null
   trackingNumber?: string | null
   shippingCarrier?: string | null

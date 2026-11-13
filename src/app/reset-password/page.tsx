@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { authAPI } from '@/lib/api'
+import { AuthCardSkeleton } from '@/components/skeletons/PageSkeletons'
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams()
@@ -66,5 +67,5 @@ function ResetPasswordContent() {
 }
 
 export default function ResetPasswordPage() {
-  return <Suspense fallback={<div className="px-4 py-12 text-center text-gray-500">Loading…</div>}><ResetPasswordContent /></Suspense>
+  return <Suspense fallback={<AuthCardSkeleton label="Loading…" showProgress={false} />}><ResetPasswordContent /></Suspense>
 }

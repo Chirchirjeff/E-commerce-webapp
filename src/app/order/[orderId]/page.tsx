@@ -9,7 +9,10 @@ import { ordersAPI, reviewsAPI } from '@/lib/api'
 import { formatPrice, formatDate } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { Order } from '@/types'
+import { useShopHref } from '@/hooks/useShopHref'
 import { useCheckoutStore } from '@/stores/checkoutStore'
+import { OrderSkeleton } from '@/components/skeletons/PageSkeletons'
+import { Skeleton, SkeletonRegion } from '@/components/ui/Skeleton'
 
 // ─── Status pipeline ──────────────────────────────────────────────────────────
 
@@ -302,8 +305,14 @@ function ItemReviewWidget({ productId, productName }: { productId: string; produ
     }
   }
 
-  // Still loading eligibility
-  if (isLoading) return null
+  // Still loading eligibility — reserve roughly the space of the result
+  if (isLoading) {
+    return (
+      <SkeletonRegion label="Checking review eligibility…">
+        <Skeleton className="h-7 w-48 rounded-full" />
+      </SkeletonRegion>
+    )
+  }
 
   // Already reviewed before landing on this page
   if (canReviewData?.hasReviewed && !submitted) {
@@ -517,9 +526,8 @@ export default function OrderTrackingPage() {
   const orderId      = params.orderId as string
   const isNewOrder   = searchParams.get('new') === '1'
 
-  // shopToken survives clearCheckout() — used to send the buyer back to the
-  // correct shop storefront after their cart has been cleared.
-  const shopToken = useCheckoutStore((state) => state.shopToken)
+  const orderShopTokens = useCheckoutStore((state) => state.orderShopTokens)
+  const fallbackShopHref = useShopHref()
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ['order', orderId],
@@ -535,19 +543,7 @@ export default function OrderTrackingPage() {
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/4" />
-          <div className="h-48 bg-gray-200 rounded-xl" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-40 bg-gray-200 rounded-xl" />
-            <div className="h-40 bg-gray-200 rounded-xl" />
-          </div>
-        </div>
-      </div>
-    )
+    return <OrderSkeleton />
   }
 
   // ── Not found ────────────────────────────────────────────────────────────
@@ -563,7 +559,7 @@ export default function OrderTrackingPage() {
         <p className="text-gray-500 mb-8">
           This link may be invalid or the order doesn&apos;t exist.
         </p>
-        <Link href={shopToken ? `/${shopToken}` : '/'}><Button variant="secondary">Back to Shop</Button></Link>
+        <Link href={fallbackShopHref}><Button variant="secondary">Back to Shop</Button></Link>
       </div>
     )
   }
@@ -577,8 +573,11 @@ export default function OrderTrackingPage() {
     ? `${origin}/track/${order.trackingToken}`
     : `${origin}/order/${order.id}`
 
-  // Where "Continue Shopping" should go — back to the buyer's shop storefront.
-  const shopHref = shopToken ? `/${shopToken}` : '/'
+  // Where "Continue Shopping" should go — back to the shop this order came from.
+  // Prefer the exact link the buyer checked out from on this device, then the
+  // order's shop link from the backend (works on any device / older orders).
+  const orderShopToken = orderShopTokens[order.id] ?? order.shopToken
+  const shopHref = orderShopToken ? `/${orderShopToken}` : fallbackShopHref
 
   const hasDelivery = order.deliveryAddress || order.deliveryCity
   const hasTracking = order.trackingNumber || order.shippingCarrier

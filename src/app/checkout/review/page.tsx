@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/authStore'
+import { CheckoutReviewSkeleton } from '@/components/skeletons/PageSkeletons'
 
 export default function ReviewPage() {
   const router   = useRouter()
@@ -24,7 +25,7 @@ export default function ReviewPage() {
     if (!delivery || deliveryBuyerId !== buyerId) router.replace('/checkout/delivery')
   }, [delivery, deliveryBuyerId, buyerId, router])
 
-  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return null
+  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return <CheckoutReviewSkeleton />
 
   const total = getTotal()
 

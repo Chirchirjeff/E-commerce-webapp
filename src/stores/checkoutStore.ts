@@ -21,12 +21,15 @@ interface CheckoutState {
   /** Shop link token — persisted independently so it survives clearCheckout(),
    *  letting the order confirmation page send the buyer back to the right shop. */
   shopToken: string | null
+  /** Shop link token the buyer actually checked out from, keyed by order id. */
+  orderShopTokens: Record<string, string>
 
   setDelivery: (details: DeliveryDetails, buyerId: string) => void
   setMpesaPhone: (phone: string) => void
   setCheckoutRequestId: (id: string) => void
   setOrderNumber: (num: string) => void
   setShopToken: (token: string) => void
+  setOrderShopToken: (orderId: string, token: string) => void
   clearCheckout: () => void
   clearBuyerDetails: () => void
 }
@@ -40,6 +43,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       checkoutRequestId: null,
       orderNumber: null,
       shopToken: null,
+      orderShopTokens: {},
 
       // When the buyer edits their phone (e.g. after a failed payment), drop the
       // M-Pesa number remembered from the previous attempt so the payment page
@@ -56,6 +60,8 @@ export const useCheckoutStore = create<CheckoutState>()(
       // shopToken is intentionally NOT reset by clearCheckout so the order
       // confirmation page can still send the buyer back to the correct shop.
       setShopToken: (token) => set({ shopToken: token }),
+      setOrderShopToken: (orderId, token) =>
+        set((state) => ({ orderShopTokens: { ...state.orderShopTokens, [orderId]: token } })),
       clearCheckout: () =>
         set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
       clearBuyerDetails: () =>

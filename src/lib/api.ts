@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { BuyerAddress } from '@/stores/authStore'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 
@@ -222,7 +223,12 @@ export const authAPI = {
   confirmBuyerPasswordReset: (data: { token: string; password: string }) =>
     apiClient.post<{ message: string }>('/auth/buyer/password-reset/confirm', data),
   getMe: (token?: string) => apiClient.get('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
-  saveAddress: (data: any) => apiClient.post('/auth/me/addresses', data),
+  saveAddress: (data: Partial<BuyerAddress> & { syncProfile?: boolean }) =>
+    apiClient.post<{ address: BuyerAddress }>('/auth/me/addresses', data),
+  setDefaultAddress: (id: string) =>
+    apiClient.patch<{ addresses: BuyerAddress[] }>(`/auth/me/addresses/${id}/default`),
+  deleteAddress: (id: string) =>
+    apiClient.delete<{ addresses: BuyerAddress[] }>(`/auth/me/addresses/${id}`),
 }
 
 // ========================================

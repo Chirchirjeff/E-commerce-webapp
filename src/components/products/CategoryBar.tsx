@@ -3,6 +3,7 @@
 import { LayoutGrid } from 'lucide-react'
 import { MarketplaceCategory } from '@/types'
 import { cn } from '@/lib/utils'
+import { CategoryBarSkeleton } from '@/components/skeletons/PageSkeletons'
 
 interface CategoryBarProps {
   categories: MarketplaceCategory[]
@@ -30,21 +31,7 @@ export function CategoryBar({
   onSelectCategory,
   isLoading,
 }: CategoryBarProps) {
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 overflow-hidden py-1">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-9 flex-shrink-0 animate-pulse rounded-full bg-gray-200 dark:bg-slate-800',
-              i === 0 ? 'w-20' : 'w-28'
-            )}
-          />
-        ))}
-      </div>
-    )
-  }
+  if (isLoading) return <CategoryBarSkeleton />
 
   if (categories.length === 0) return null
 

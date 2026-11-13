@@ -7,6 +7,7 @@ import { useCartStore } from '@/stores/cartStore'
 import { productsAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
+import { useShopHref } from '@/hooks/useShopHref'
 
 export default function CartPage() {
   const items          = useCartStore((state) => state.items)
@@ -29,7 +30,7 @@ export default function CartPage() {
     enabled: items.length > 0,
   })
 
-  const continueShoppingHref = shopToken ? `/${shopToken}` : '/'
+  const continueShoppingHref = useShopHref(shopToken)
 
   if (items.length === 0) {
     return (

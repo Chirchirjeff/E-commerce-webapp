@@ -9,6 +9,7 @@ import { mpesaAPI, MpesaStatusResponse } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
+import { CheckoutProcessingSkeleton } from '@/components/skeletons/PageSkeletons'
 
 // Safaricom STK push prompts expire in ~3 minutes; allow the full window
 const POLL_INTERVAL_MS  = 3_000
@@ -69,6 +70,7 @@ export default function ProcessingPage() {
   const reservedOrderNumber = useCheckoutStore((state) => state.orderNumber)
   const clearCheckout       = useCheckoutStore((state) => state.clearCheckout)
   const setShopToken        = useCheckoutStore((state) => state.setShopToken)
+  const setOrderShopToken   = useCheckoutStore((state) => state.setOrderShopToken)
 
   const [view, setView]     = useState<ViewState>('waiting')
   const [status, setStatus] = useState<MpesaStatusResponse | null>(null)
@@ -118,7 +120,11 @@ export default function ProcessingPage() {
         if (data.status === 'SUCCESS') {
           // Save the shop token before clearing stores — it survives clearCheckout()
           // and lets the order confirmation page send the buyer back to the right shop.
-          if (cartShopToken) setShopToken(cartShopToken)
+          if (cartShopToken) {
+            setShopToken(cartShopToken)
+            // Remember which shop link this specific order came from.
+            if (data.orderId) setOrderShopToken(data.orderId, cartShopToken)
+          }
           clearCart()
           clearCheckout()
           if (data.orderId) {
@@ -134,7 +140,7 @@ export default function ProcessingPage() {
       // Network hiccup — keep retrying until timeout
       pollingRef.current = setTimeout(pollStatus, POLL_INTERVAL_MS)
     }
-  }, [checkoutRequestId, cartShopToken, setShopToken, clearCart, clearCheckout, reservedOrderNumber, router])
+  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, reservedOrderNumber, router])
 
   useEffect(() => {
     if (!checkoutRequestId) return
@@ -144,7 +150,7 @@ export default function ProcessingPage() {
     return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
   }, [checkoutRequestId, pollStatus])
 
-  if (!checkoutRequestId) return null
+  if (!checkoutRequestId) return <CheckoutProcessingSkeleton />
 
   const total = getTotal()
 

@@ -7,6 +7,9 @@ import { ordersAPI } from '@/lib/api'
 import { formatDate, formatPrice } from '@/lib/utils'
 import { Order } from '@/types'
 import Button from '@/components/ui/Button'
+import { useCheckoutStore } from '@/stores/checkoutStore'
+import { useShopHref } from '@/hooks/useShopHref'
+import { TrackOrderSkeleton } from '@/components/skeletons/PageSkeletons'
 
 const stages = [
   { key: 'paid', label: 'Payment received', description: 'Your payment has been confirmed.' },
@@ -25,6 +28,8 @@ function stageIndex(status: string) {
 export default function TrackOrderPage() {
   const params = useParams()
   const token = params.token as string
+  const orderShopTokens = useCheckoutStore((state) => state.orderShopTokens)
+  const fallbackShopHref = useShopHref()
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ['track-order', token],
@@ -34,7 +39,7 @@ export default function TrackOrderPage() {
   })
 
   if (isLoading) {
-    return <div className="max-w-3xl mx-auto px-4 py-16 text-center text-gray-500">Loading your order...</div>
+    return <TrackOrderSkeleton />
   }
 
   if (error || !order) {
@@ -42,14 +47,16 @@ export default function TrackOrderPage() {
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Tracking link unavailable</h1>
         <p className="text-gray-600 mb-8">This link is invalid or the order is no longer available.</p>
-        <Link href={`/${token}`}><Button>Back to Shop</Button></Link>
+        <Link href={fallbackShopHref}><Button>Back to Shop</Button></Link>
       </div>
     )
   }
 
-  // The shop storefront lives at /:token — same token as in this URL.
-  // Using it directly means "Continue Shopping" always goes somewhere valid.
-  const shopHref = `/${token}`
+  // `token` here is the order's tracking token, NOT a shop link token, so it
+  // can't be used for the storefront URL. Send the buyer back to the shop this
+  // order came from instead.
+  const orderShopToken = orderShopTokens[order.id] ?? order.shopToken
+  const shopHref = orderShopToken ? `/${orderShopToken}` : fallbackShopHref
   const currentStage = stageIndex(order.status)
 
   const isCancelled = order.status.toLowerCase() === 'cancelled'

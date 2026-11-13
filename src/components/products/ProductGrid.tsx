@@ -1,15 +1,27 @@
 'use client'
 
 import { useState, memo } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Eye, SearchX } from 'lucide-react'
 import { Product } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import { StarRating, formatReviewCount } from '@/components/ui/StarRating'
-import { ProductModal } from './ProductModal'
 import { ProductCardCarousel } from './ProductCardCarousel'
 import { useCartStore } from '@/stores/cartStore'
 import { cn } from '@/lib/utils'
+import {
+  PRODUCT_GRID_CLASSES,
+  ProductGridSkeleton,
+  ProductModalSkeleton,
+} from '@/components/skeletons/PageSkeletons'
+
+// The quick-view modal is large (gallery, tabs, reviews) and only opens on
+// click, so keep it out of the storefront's initial bundle.
+const ProductModal = dynamic(
+  () => import('./ProductModal').then((m) => m.ProductModal),
+  { ssr: false, loading: () => <ProductModalSkeleton /> }
+)
 
 // ── Rank badge theming ─────────────────────────────────────────────────────────
 
@@ -29,7 +41,7 @@ const RANK_STYLES: Record<number, string> = {
   5: 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow',
 }
 
-const GRID = 'grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+const GRID = PRODUCT_GRID_CLASSES
 
 interface ProductGridProps {
   products: Product[]
@@ -51,25 +63,7 @@ function ProductGridComponent({ products, shopToken, isLoading }: ProductGridPro
     addToCart(product, quantity, shopToken)
   }
 
-  if (isLoading) {
-    return (
-      <div className={GRID}>
-        {[...Array(10)].map((_, i) => (
-          <div
-            key={i}
-            className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="aspect-square animate-pulse bg-gray-200 dark:bg-slate-800" />
-            <div className="space-y-2 p-3 sm:p-4">
-              <div className="h-4 w-4/5 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-              <div className="h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
+  if (isLoading) return <ProductGridSkeleton />
 
   if (products.length === 0) {
     return (

@@ -2,18 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import { useParams, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Sparkles, Store, X } from 'lucide-react'
 import { ShopHeader, ShopHeaderSkeleton } from '@/components/layout/ShopHeader'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { CategoryBar } from '@/components/products/CategoryBar'
 import { SearchBar } from '@/components/products/SearchBar'
-import { CollectionsSection } from '@/components/collections/CollectionCarousel'
+import { CollectionsSkeleton } from '@/components/skeletons/PageSkeletons'
 import { useShopCategories } from '@/hooks/useShopCategories'
 import { useShopCollections } from '@/hooks/useShopCollections'
 import { shopAPI, productsAPI } from '@/lib/api'
 import { Shop, Product } from '@/types'
 import { cn } from '@/lib/utils'
+import { useShopContextStore } from '@/stores/shopContextStore'
+
+// Collection carousels pull in embla-carousel; split them out of the initial
+// bundle. The chunk starts loading while collections are still being fetched.
+const CollectionsSection = dynamic(
+  () => import('@/components/collections/CollectionCarousel').then((m) => m.CollectionsSection),
+  { loading: () => <CollectionsSkeleton /> }
+)
 
 export default function StorefrontPage() {
   const params = useParams()
@@ -40,6 +49,13 @@ export default function StorefrontPage() {
     },
     enabled: !!token,
   })
+
+  // Remember this storefront so "Continue Shopping" can return here later,
+  // even after the cart is cleared by a purchase.
+  const setLastShopToken = useShopContextStore((state) => state.setLastShopToken)
+  useEffect(() => {
+    if (shopData && token) setLastShopToken(token)
+  }, [shopData, token, setLastShopToken])
 
   // ── Categories ─────────────────────────────────────────────────────────────
   const {

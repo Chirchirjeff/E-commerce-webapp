@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { BadgeCheck, CalendarDays, Layers, Package } from 'lucide-react'
 import { Shop } from '@/types'
-import { cn } from '@/lib/utils'
 
 interface ShopHeaderProps {
   shop: Shop
@@ -124,26 +123,4 @@ export function ShopHeader({ shop, productCount = 0, categoryCount = 0 }: ShopHe
 }
 
 /** Hero-shaped placeholder shown while the shop resolves. */
-export function ShopHeaderSkeleton() {
-  return (
-    <section className="relative animate-pulse">
-      <div className="h-56 w-full bg-gray-200 dark:bg-slate-800 sm:h-72 md:h-80 lg:h-[22rem]" />
-      <div className="relative mx-auto -mt-20 max-w-7xl px-4 sm:-mt-24 sm:px-6 lg:px-8">
-        <div className={cn(
-          'flex flex-col gap-5 rounded-3xl border p-5 sm:flex-row sm:items-center sm:p-7',
-          'border-gray-100 bg-white dark:border-slate-800 dark:bg-slate-900'
-        )}>
-          <div className="h-24 w-24 rounded-2xl bg-gray-200 dark:bg-slate-800 sm:h-28 sm:w-28" />
-          <div className="flex-1 space-y-3">
-            <div className="h-7 w-1/3 rounded-lg bg-gray-200 dark:bg-slate-800" />
-            <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-slate-800" />
-            <div className="flex gap-2">
-              <div className="h-6 w-24 rounded-full bg-gray-200 dark:bg-slate-800" />
-              <div className="h-6 w-24 rounded-full bg-gray-200 dark:bg-slate-800" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
+export { ShopHeaderSkeleton } from '@/components/skeletons/PageSkeletons'

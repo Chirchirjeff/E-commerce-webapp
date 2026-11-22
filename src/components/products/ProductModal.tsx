@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { Product, ProductDetail, DescriptionBlock, Review } from '@/types'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { normalizeProductImages } from '@/lib/image-utils'
@@ -15,6 +14,7 @@ import { useTheme } from '@/context/ThemeContext'
 import { useCartStore } from '@/stores/cartStore'
 import { cn } from '@/lib/utils'
 import { useProductReviews, useCanReview, useSubmitReview } from '@/hooks/useReviews'
+import { QuickPayModal } from '@/components/checkout/QuickPayModal'
 
 interface ProductModalProps {
   product: ProductDetail | Product
@@ -40,8 +40,8 @@ export function ProductModal({
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAutoSlidingModal, setIsAutoSlidingModal] = useState(true)
   const [activeTab, setActiveTab] = useState<ActiveTab>('details')
+  const [quickPayOpen, setQuickPayOpen] = useState(false)
   const { theme } = useTheme()
-  const router = useRouter()
   const addToCart = useCartStore((state) => state.addItem)
 
   const images = (product as ProductDetail).images
@@ -117,8 +117,8 @@ export function ProductModal({
   const handleBuyNow = () => {
     addToCart(product as Product, quantity, shopToken)
     setQuantity(1)
-    onClose()
-    router.push('/cart')
+    // Keep the product modal open behind the pay modal — close both when done
+    setQuickPayOpen(true)
   }
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -136,17 +136,17 @@ export function ProductModal({
       <div className="fixed inset-0 bg-black/60 z-40 transition-opacity" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
         <div
           className={cn(
-            'rounded-2xl shadow-2xl w-full max-w-4xl my-8 overflow-hidden',
+            'rounded-2xl shadow-2xl w-full max-w-4xl my-2 sm:my-8 overflow-hidden',
             isDark ? 'bg-slate-900' : 'bg-white'
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* ── Header ── */}
           <div className={cn(
-            'flex items-center justify-between p-6 sticky top-0 border-b z-10',
+            'flex items-center justify-between p-4 sm:p-6 md:sticky top-0 border-b z-10',
             isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'
           )}>
             <div className="min-w-0 pr-4">
@@ -176,7 +176,7 @@ export function ProductModal({
           </div>
 
           {/* ── Body ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 max-h-[calc(100vh-180px)] overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:max-h-[calc(100vh-180px)] md:overflow-hidden">
 
             {/* ── Left: Images ── */}
             <div className={cn(
@@ -243,9 +243,9 @@ export function ProductModal({
             </div>
 
             {/* ── Right: Tabs (Details / Description / Reviews) ── */}
-            <div className="flex flex-col overflow-hidden">
+            <div className="flex flex-col md:overflow-hidden">
               {/* Tab bar */}
-              <div className={cn('flex border-b flex-shrink-0', isDark ? 'border-slate-700' : 'border-gray-200')}>
+              <div className={cn('flex border-b flex-shrink-0 sticky top-0 z-10', isDark ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
                 {(['details', 'description', 'reviews'] as ActiveTab[]).map((tab) => (
                   <button
                     key={tab}
@@ -271,7 +271,7 @@ export function ProductModal({
               </div>
 
               {/* Tab content — scrollable */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="md:flex-1 md:overflow-y-auto p-6">
 
                 {/* ── DETAILS TAB ── */}
                 {activeTab === 'details' && (
@@ -346,7 +346,7 @@ export function ProductModal({
 
                     {/* Cart / Buy now */}
                     {p.stockQuantity > 0 && onAddToCart && (
-                      <div className="space-y-3">
+                      <div className="space-y-3 sticky bottom-0 pb-2 pt-2 -mx-6 px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 md:static md:border-t-0 md:bg-transparent md:dark:bg-transparent md:mx-0 md:px-0 md:pb-0 md:pt-0">
                         <div className="grid grid-cols-2 gap-3">
                           <Button onClick={handleAddToCart} className="w-full py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors">
                             Add to Cart ({quantity})
@@ -428,6 +428,15 @@ export function ProductModal({
           </div>
         </div>
       </div>
+
+      {/* QuickPayModal sits on top of the product modal when Buy Now is clicked */}
+      <QuickPayModal
+        isOpen={quickPayOpen}
+        onClose={() => {
+          setQuickPayOpen(false)
+          onClose()
+        }}
+      />
     </>
   )
 }

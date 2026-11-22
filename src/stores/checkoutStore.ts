@@ -18,6 +18,8 @@ interface CheckoutState {
   mpesaPhone: string
   checkoutRequestId: string | null
   orderNumber: string | null        // reserved before payment, shown on statement
+  /** Order id returned on payment success — held until delivery-after page submits. */
+  pendingOrderId: string | null
   /** Shop link token — persisted independently so it survives clearCheckout(),
    *  letting the order confirmation page send the buyer back to the right shop. */
   shopToken: string | null
@@ -28,6 +30,7 @@ interface CheckoutState {
   setMpesaPhone: (phone: string) => void
   setCheckoutRequestId: (id: string) => void
   setOrderNumber: (num: string) => void
+  setPendingOrderId: (id: string | null) => void
   setShopToken: (token: string) => void
   setOrderShopToken: (orderId: string, token: string) => void
   clearCheckout: () => void
@@ -42,6 +45,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       mpesaPhone: '',
       checkoutRequestId: null,
       orderNumber: null,
+      pendingOrderId: null,
       shopToken: null,
       orderShopTokens: {},
 
@@ -57,15 +61,16 @@ export const useCheckoutStore = create<CheckoutState>()(
       setMpesaPhone: (phone) => set({ mpesaPhone: phone }),
       setCheckoutRequestId: (id) => set({ checkoutRequestId: id }),
       setOrderNumber: (num) => set({ orderNumber: num }),
+      setPendingOrderId: (id) => set({ pendingOrderId: id }),
       // shopToken is intentionally NOT reset by clearCheckout so the order
       // confirmation page can still send the buyer back to the correct shop.
       setShopToken: (token) => set({ shopToken: token }),
       setOrderShopToken: (orderId, token) =>
         set((state) => ({ orderShopTokens: { ...state.orderShopTokens, [orderId]: token } })),
       clearCheckout: () =>
-        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
+        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null, pendingOrderId: null }),
       clearBuyerDetails: () =>
-        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null }),
+        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null, pendingOrderId: null }),
     }),
     {
       name: 'checkout-storage',

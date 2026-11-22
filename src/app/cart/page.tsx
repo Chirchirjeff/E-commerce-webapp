@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useQuery } from '@tanstack/react-query'
@@ -8,6 +9,7 @@ import { productsAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { useShopHref } from '@/hooks/useShopHref'
+import { QuickPayModal } from '@/components/checkout/QuickPayModal'
 
 export default function CartPage() {
   const items          = useCartStore((state) => state.items)
@@ -15,6 +17,8 @@ export default function CartPage() {
   const updateQuantity = useCartStore((state) => state.updateQuantity)
   const getTotal       = useCartStore((state) => state.getTotal)
   const shopToken      = useCartStore((state) => state.shopToken)
+
+  const [quickPayOpen, setQuickPayOpen] = useState(false)
 
   // Refresh product details in case cart data is stale
   const { data: productsMap } = useQuery({
@@ -157,12 +161,14 @@ export default function CartPage() {
                 <span>{formatPrice(total)}</span>
               </div>
             </div>
-            <Link href="/checkout/delivery">
-              <Button className="w-full">Proceed to Checkout</Button>
-            </Link>
+            <Button className="w-full" onClick={() => setQuickPayOpen(true)}>
+              Proceed to Checkout
+            </Button>
           </div>
         </aside>
       </div>
+
+      <QuickPayModal isOpen={quickPayOpen} onClose={() => setQuickPayOpen(false)} />
     </div>
   )
 }

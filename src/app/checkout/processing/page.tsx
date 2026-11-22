@@ -71,6 +71,7 @@ export default function ProcessingPage() {
   const clearCheckout       = useCheckoutStore((state) => state.clearCheckout)
   const setShopToken        = useCheckoutStore((state) => state.setShopToken)
   const setOrderShopToken   = useCheckoutStore((state) => state.setOrderShopToken)
+  const setPendingOrderId   = useCheckoutStore((state) => state.setPendingOrderId)
 
   const [view, setView]     = useState<ViewState>('waiting')
   const [status, setStatus] = useState<MpesaStatusResponse | null>(null)
@@ -128,7 +129,9 @@ export default function ProcessingPage() {
           clearCart()
           clearCheckout()
           if (data.orderId) {
-            router.replace(`/order/${data.orderId}?new=1`)
+            // Redirect to delivery-after so buyer can enter their real address
+            setPendingOrderId(data.orderId)
+            router.replace('/checkout/delivery-after')
           } else {
             setView('success')
           }
@@ -140,7 +143,7 @@ export default function ProcessingPage() {
       // Network hiccup — keep retrying until timeout
       pollingRef.current = setTimeout(pollStatus, POLL_INTERVAL_MS)
     }
-  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, reservedOrderNumber, router])
+  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, setPendingOrderId, reservedOrderNumber, router])
 
   useEffect(() => {
     if (!checkoutRequestId) return

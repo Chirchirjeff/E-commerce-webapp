@@ -209,6 +209,23 @@ export const ordersAPI = {
 
   trackByOrderNumber: (orderNumber: string) =>
     apiClient.get(`/orders/mine/number/${encodeURIComponent(orderNumber)}`),
+
+  /**
+   * Update delivery address on a buyer's own paid order.
+   * Used by the post-payment delivery-after page.
+   */
+  updateDelivery: (
+    orderId: string,
+    data: {
+      deliveryAddress?: string
+      deliveryCity?: string
+      deliveryState?: string
+      deliveryZip?: string
+      deliveryName?: string
+      deliveryPhone?: string
+      deliveryEmail?: string
+    },
+  ) => apiClient.patch(`/orders/${orderId}/delivery`, data),
 }
 
 export const authAPI = {

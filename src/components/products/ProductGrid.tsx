@@ -168,7 +168,7 @@ function ProductGridComponent({ products, shopToken, isLoading }: ProductGridPro
                 <div className="mt-auto flex flex-wrap items-baseline gap-x-2 pt-1">
                   {product.salePrice != null ? (
                     <>
-                      <span className="text-base font-extrabold text-rose-600 dark:text-rose-400 sm:text-lg">
+                      <span className="text-base font-extrabold text-green-600 dark:text-green-400 sm:text-lg">
                         {formatPrice(product.salePrice)}
                       </span>
                       <span className="text-xs text-gray-400 line-through dark:text-slate-500">

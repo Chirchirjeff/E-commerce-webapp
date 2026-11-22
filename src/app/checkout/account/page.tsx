@@ -53,7 +53,17 @@ function CheckoutAccountPageContent() {
       }
       setCode(''); attemptedCode.current = null
       setMode('verify')
-    } catch (err) { setError(message(err)) } finally { setLoading(false) }
+    } catch (err) {
+      const msg = message(err)
+      // Email already registered — switch to login mode automatically so the
+      // buyer doesn't have to find and click the toggle themselves.
+      if (mode === 'register' && msg.toLowerCase().includes('already exists')) {
+        setMode('login')
+        setError('This email is already registered. Enter your password to sign in.')
+      } else {
+        setError(msg)
+      }
+    } finally { setLoading(false) }
   }
 
   const CODE_LENGTH = 6

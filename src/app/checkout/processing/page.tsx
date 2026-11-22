@@ -72,6 +72,7 @@ export default function ProcessingPage() {
   const setShopToken        = useCheckoutStore((state) => state.setShopToken)
   const setOrderShopToken   = useCheckoutStore((state) => state.setOrderShopToken)
   const setPendingOrderId   = useCheckoutStore((state) => state.setPendingOrderId)
+  const setPendingOrderTrackingToken = useCheckoutStore((state) => state.setPendingOrderTrackingToken)
 
   const [view, setView]     = useState<ViewState>('waiting')
   const [status, setStatus] = useState<MpesaStatusResponse | null>(null)
@@ -123,13 +124,13 @@ export default function ProcessingPage() {
           // and lets the order confirmation page send the buyer back to the right shop.
           if (cartShopToken) {
             setShopToken(cartShopToken)
-            // Remember which shop link this specific order came from.
             if (data.orderId) setOrderShopToken(data.orderId, cartShopToken)
           }
           clearCart()
           clearCheckout()
           if (data.orderId) {
-            // Redirect to delivery-after so buyer can enter their real address
+            // Store tracking token for guest order confirmation
+            if (data.trackingToken) setPendingOrderTrackingToken(data.trackingToken)
             setPendingOrderId(data.orderId)
             router.replace('/checkout/delivery-after')
           } else {
@@ -143,7 +144,7 @@ export default function ProcessingPage() {
       // Network hiccup — keep retrying until timeout
       pollingRef.current = setTimeout(pollStatus, POLL_INTERVAL_MS)
     }
-  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, setPendingOrderId, reservedOrderNumber, router])
+  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, setPendingOrderId, setPendingOrderTrackingToken, reservedOrderNumber, router])
 
   useEffect(() => {
     if (!checkoutRequestId) return

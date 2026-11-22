@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -520,19 +521,21 @@ function CopyButton({ text }: { text: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function OrderTrackingPage() {
+function OrderTrackingPageContent() {
   const params       = useParams()
   const searchParams = useSearchParams()
   const orderId      = params.orderId as string
   const isNewOrder   = searchParams.get('new') === '1'
+  // Guest buyers pass their trackingToken as a query param (received at payment time)
+  const guestTrackingToken = searchParams.get('trackingToken') ?? undefined
 
   const orderShopTokens = useCheckoutStore((state) => state.orderShopTokens)
   const fallbackShopHref = useShopHref()
 
   const { data: order, isLoading, error } = useQuery({
-    queryKey: ['order', orderId],
+    queryKey: ['order', orderId, guestTrackingToken],
     queryFn: async () => {
-      const res = await ordersAPI.getOne(orderId)
+      const res = await ordersAPI.getOne(orderId, guestTrackingToken)
       return res.data as Order
     },
     enabled: !!orderId,
@@ -801,5 +804,13 @@ export default function OrderTrackingPage() {
         This page refreshes automatically every 30 seconds &bull; bookmark this link to check back anytime
       </p>
     </div>
+  )
+}
+
+export default function OrderTrackingPage() {
+  return (
+    <Suspense fallback={<OrderSkeleton />}>
+      <OrderTrackingPageContent />
+    </Suspense>
   )
 }

@@ -3,18 +3,21 @@
 /**
  * QuickPayModal
  *
- * Asks for nothing but the buyer's M-Pesa phone number, then fires the STK push.
- * No account, no email, no delivery details upfront — just pay.
+ * Adaptive quick-pay sheet:
+ * - Authenticated buyer with saved address → pre-fills name, phone, address.
+ *   The first field visible is the M-Pesa number (pre-filled from their profile).
+ * - Guest / no saved address → asks for the minimum: name, phone, delivery address,
+ *   then M-Pesa number.
  *
- * After the STK push is sent the buyer is navigated to /checkout/processing
- * where they enter their PIN.
+ * After the STK push is sent the buyer is navigated to /checkout/processing.
  */
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { X } from 'lucide-react'
+import { X, ChevronDown } from 'lucide-react'
 import { useCartStore } from '@/stores/cartStore'
 import { useCheckoutStore } from '@/stores/checkoutStore'
+import { useAuthStore } from '@/stores/authStore'
 import { mpesaAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 
@@ -39,8 +42,6 @@ function Spinner({ size = 18 }: { size?: number }) {
   )
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 export interface QuickPayModalProps {
   isOpen: boolean
   onClose: () => void
@@ -60,11 +61,42 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
   const setOrderNumber       = useCheckoutStore((state) => state.setOrderNumber)
   const setMpesaPhone        = useCheckoutStore((state) => state.setMpesaPhone)
   const setShopToken         = useCheckoutStore((state) => state.setShopToken)
+  const setDelivery          = useCheckoutStore((state) => state.setDelivery)
 
-  const [phone, setPhone]           = useState('')
-  const [phoneError, setPhoneError] = useState('')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
+  const user = useAuthStore((state) => state.user)
+
+  // ── Derive default values from authenticated buyer's profile ─────────────────
+  const defaultAddress = useMemo(
+    () => user?.addresses?.find((a) => a.isDefault) ?? user?.addresses?.[0] ?? null,
+    [user]
+  )
+
+  const isAuthenticated = !!user
+
+  // For authenticated buyers with a default address, we show a compact summary
+  // and only ask for the M-Pesa number.
+  const hasFullDetails = !!(
+    isAuthenticated &&
+    defaultAddress &&
+    (user.name || defaultAddress.recipientName) &&
+    (user.phone || defaultAddress.phone) &&
+    defaultAddress.addressLine &&
+    defaultAddress.city
+  )
+
+  // Contact / delivery fields (only shown for guest or incomplete profiles)
+  const [name, setName]       = useState('')
+  const [phone, setPhone]     = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity]       = useState('')
+
+  // M-Pesa phone — always shown
+  const [mpesaPhone, setMpesaPhoneState]     = useState('')
+  const [mpesaPhoneError, setMpesaPhoneError] = useState('')
+
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [showDetails, setShowDetails] = useState(false)
 
   // Lock body scroll while open
   useEffect(() => {
@@ -72,15 +104,33 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  // Reset when reopened
+  // Reset and pre-fill when reopened
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+    setMpesaPhoneError('')
+    setError('')
+    setLoading(false)
+    setShowDetails(false)
+
+    if (hasFullDetails) {
+      // Pre-fill M-Pesa phone from buyer's profile
+      setMpesaPhoneState(user?.phone || defaultAddress?.phone || '')
+    } else if (isAuthenticated && user) {
+      // Partial profile — pre-fill what we have
+      setName(user.name || '')
+      setPhone(user.phone || '')
+      setAddress(defaultAddress?.addressLine || '')
+      setCity(defaultAddress?.city || '')
+      setMpesaPhoneState(user.phone || '')
+    } else {
+      // Guest — blank slate
+      setName('')
       setPhone('')
-      setPhoneError('')
-      setError('')
-      setLoading(false)
+      setAddress('')
+      setCity('')
+      setMpesaPhoneState('')
     }
-  }, [isOpen])
+  }, [isOpen, hasFullDetails, isAuthenticated, user, defaultAddress])
 
   if (!isOpen) return null
 
@@ -88,33 +138,73 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const err = validateKenyanPhone(phone)
-    if (err) { setPhoneError(err); return }
-    setPhoneError('')
+    const phoneErr = validateKenyanPhone(mpesaPhone)
+    if (phoneErr) { setMpesaPhoneError(phoneErr); return }
+    setMpesaPhoneError('')
     setError('')
     setLoading(true)
 
-    const cleanPhone = phone.replace(/\s+/g, '')
+    const cleanPhone = mpesaPhone.replace(/\s+/g, '')
+
+    // Build delivery details based on buyer state
+    let contactName: string
+    let contactPhone: string
+    let contactEmail: string | null
+    let deliveryAddress: string
+    let deliveryCity: string
+    let deliveryState: string
+    let deliveryZip: string
+
+    if (hasFullDetails && defaultAddress) {
+      contactName    = user!.name || defaultAddress.recipientName
+      contactPhone   = cleanPhone
+      contactEmail   = user!.email || null
+      deliveryAddress = defaultAddress.addressLine
+      deliveryCity   = defaultAddress.city
+      deliveryState  = defaultAddress.state || defaultAddress.city
+      deliveryZip    = defaultAddress.postalCode || '00100'
+    } else {
+      contactName    = (isAuthenticated ? user!.name : name).trim() || 'Guest'
+      contactPhone   = cleanPhone
+      contactEmail   = isAuthenticated ? user!.email || null : null
+      deliveryAddress = (isAuthenticated ? defaultAddress?.addressLine || address : address).trim() || 'To be confirmed'
+      deliveryCity   = (isAuthenticated ? defaultAddress?.city || city : city).trim() || 'Nairobi'
+      deliveryState  = deliveryCity
+      deliveryZip    = (isAuthenticated ? defaultAddress?.postalCode : undefined) || '00100'
+    }
+
+    // Save delivery details to checkoutStore so processing/delivery-after pages have them
+    setDelivery({
+      customerName: contactName,
+      customerEmail: contactEmail || '',
+      customerPhone: contactPhone,
+      deliveryAddress,
+      deliveryCity,
+      deliveryState,
+      deliveryZip,
+    }, user?.id ?? null)
 
     try {
       const response = await mpesaAPI.initiateStkPush({
         phoneNumber: cleanPhone,
         amount: total,
         orderPayload: {
-          customerName:    'Guest',
-          customerEmail:   null,
-          customerPhone:   cleanPhone,
-          deliveryAddress: 'To be confirmed',
-          deliveryCity:    'Nairobi',
-          deliveryState:   'Nairobi',
-          deliveryZip:     '00100',
-          shopId:          shopId!,
+          customerName: contactName,
+          customerEmail: contactEmail,
+          customerPhone: contactPhone,
+          deliveryAddress,
+          deliveryCity,
+          deliveryState,
+          deliveryZip,
+          shopId: shopId!,
           items: items.map((item) => ({
             productId: item.productId,
             quantity:  item.quantity,
             price:     item.price,
           })),
           total,
+          // Link order to buyer account when authenticated
+          buyerId: user?.id ?? null,
         },
       })
 
@@ -126,12 +216,9 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
       router.push('/checkout/processing')
     } catch (err: any) {
       const raw: unknown = err?.response?.data?.message
-      // Show the first item if it's an array, otherwise fall back to a clean generic message
       const detail = Array.isArray(raw) ? raw[0] : typeof raw === 'string' ? raw : null
-      // Never show raw Safaricom JSON or internal error details to the buyer
-      const isTechnical = typeof detail === 'string' && (
-        detail.includes('{') || detail.includes('errorCode') || detail.includes('STK push')
-      )
+      const isTechnical = typeof detail === 'string' &&
+        (detail.includes('{') || detail.includes('errorCode') || detail.includes('STK push'))
       setError(isTechnical || !detail
         ? 'Payment request failed. Please check your number and try again.'
         : detail
@@ -179,25 +266,93 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {/* Authenticated with full details — compact delivery summary */}
+            {hasFullDetails && defaultAddress && (
+              <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-sm min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{user!.name}</p>
+                    <p className="text-gray-500 text-xs truncate">
+                      {defaultAddress.addressLine}, {defaultAddress.city}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetails((v) => !v)}
+                    className="shrink-0 flex items-center gap-0.5 text-xs text-primary-600 font-medium hover:underline"
+                  >
+                    Change
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Guest or expanded details section */}
+            {(!hasFullDetails || showDetails) && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={isAuthenticated ? (user?.name || name) : name}
+                    onChange={(e) => { if (!isAuthenticated) setName(e.target.value) }}
+                    readOnly={isAuthenticated && !!user?.name}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50"
+                    placeholder="Jane Doe"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Street Address *</label>
+                  <input
+                    type="text"
+                    value={isAuthenticated ? (defaultAddress?.addressLine || address) : address}
+                    onChange={(e) => { if (!isAuthenticated) setAddress(e.target.value) }}
+                    readOnly={isAuthenticated && !!defaultAddress?.addressLine}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50"
+                    placeholder="123 Moi Avenue, Apt 4B"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Town / City *</label>
+                  <input
+                    type="text"
+                    value={isAuthenticated ? (defaultAddress?.city || city) : city}
+                    onChange={(e) => { if (!isAuthenticated) setCity(e.target.value) }}
+                    readOnly={isAuthenticated && !!defaultAddress?.city}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50"
+                    placeholder="Nairobi"
+                  />
+                </div>
+                {showDetails && (
+                  <p className="text-xs text-primary-600 text-center">
+                    To update your address,{' '}
+                    <a href="/account" className="underline">manage it in your account</a>.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} noValidate className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   M-Pesa Phone Number *
                 </label>
                 <input
                   type="tel"
-                  value={phone}
-                  onChange={(e) => { setPhone(e.target.value); setPhoneError('') }}
+                  value={mpesaPhone}
+                  onChange={(e) => { setMpesaPhoneState(e.target.value); setMpesaPhoneError('') }}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg ${
-                    phoneError ? 'border-red-500' : 'border-gray-300'
+                    mpesaPhoneError ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="0712 345 678"
                   autoComplete="tel"
-                  autoFocus
+                  autoFocus={!hasFullDetails}
                   required
                   disabled={loading}
                 />
-                {phoneError && <p className="mt-1 text-sm text-red-600">{phoneError}</p>}
+                {mpesaPhoneError && <p className="mt-1 text-sm text-red-600">{mpesaPhoneError}</p>}
                 <p className="mt-1 text-xs text-gray-400">
                   You'll get a prompt to enter your M-Pesa PIN on this number.
                 </p>

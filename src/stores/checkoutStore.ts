@@ -20,17 +20,24 @@ interface CheckoutState {
   orderNumber: string | null        // reserved before payment, shown on statement
   /** Order id returned on payment success — held until delivery-after page submits. */
   pendingOrderId: string | null
+  /**
+   * Tracking token for the pending order.
+   * Used by guest buyers (no account) to view their order confirmation and to
+   * authorise the delivery-address PATCH without a JWT.
+   */
+  pendingOrderTrackingToken: string | null
   /** Shop link token — persisted independently so it survives clearCheckout(),
    *  letting the order confirmation page send the buyer back to the right shop. */
   shopToken: string | null
   /** Shop link token the buyer actually checked out from, keyed by order id. */
   orderShopTokens: Record<string, string>
 
-  setDelivery: (details: DeliveryDetails, buyerId: string) => void
+  setDelivery: (details: DeliveryDetails, buyerId: string | null) => void
   setMpesaPhone: (phone: string) => void
   setCheckoutRequestId: (id: string) => void
   setOrderNumber: (num: string) => void
   setPendingOrderId: (id: string | null) => void
+  setPendingOrderTrackingToken: (token: string | null) => void
   setShopToken: (token: string) => void
   setOrderShopToken: (orderId: string, token: string) => void
   clearCheckout: () => void
@@ -46,6 +53,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       checkoutRequestId: null,
       orderNumber: null,
       pendingOrderId: null,
+      pendingOrderTrackingToken: null,
       shopToken: null,
       orderShopTokens: {},
 
@@ -62,22 +70,39 @@ export const useCheckoutStore = create<CheckoutState>()(
       setCheckoutRequestId: (id) => set({ checkoutRequestId: id }),
       setOrderNumber: (num) => set({ orderNumber: num }),
       setPendingOrderId: (id) => set({ pendingOrderId: id }),
+      setPendingOrderTrackingToken: (token) => set({ pendingOrderTrackingToken: token }),
       // shopToken is intentionally NOT reset by clearCheckout so the order
       // confirmation page can still send the buyer back to the correct shop.
       setShopToken: (token) => set({ shopToken: token }),
       setOrderShopToken: (orderId, token) =>
         set((state) => ({ orderShopTokens: { ...state.orderShopTokens, [orderId]: token } })),
       clearCheckout: () =>
-        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null, pendingOrderId: null }),
+        set({
+          delivery: null,
+          deliveryBuyerId: null,
+          mpesaPhone: '',
+          checkoutRequestId: null,
+          orderNumber: null,
+          pendingOrderId: null,
+          pendingOrderTrackingToken: null,
+        }),
       clearBuyerDetails: () =>
-        set({ delivery: null, deliveryBuyerId: null, mpesaPhone: '', checkoutRequestId: null, orderNumber: null, pendingOrderId: null }),
+        set({
+          delivery: null,
+          deliveryBuyerId: null,
+          mpesaPhone: '',
+          checkoutRequestId: null,
+          orderNumber: null,
+          pendingOrderId: null,
+          pendingOrderTrackingToken: null,
+        }),
     }),
     {
       name: 'checkout-storage',
       // Data saved by older versions was not associated with a buyer. Discard
       // it during hydration instead of ever showing it to a later account.
       onRehydrateStorage: () => (state) => {
-        if (state?.delivery && !state.deliveryBuyerId) state.clearBuyerDetails()
+        if (state?.delivery && state.deliveryBuyerId === undefined) state.clearBuyerDetails()
       },
     }
   )

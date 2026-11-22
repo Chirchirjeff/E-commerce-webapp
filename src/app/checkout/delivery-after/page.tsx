@@ -1,19 +1,24 @@
 'use client'
+'use client'
 
 /**
  * /checkout/delivery-after
  *
  * Shown immediately after a successful M-Pesa payment.
- * The buyer enters their delivery address so the seller knows where to ship.
- * This information is PATCHed onto the already-paid order.
+ * Collects a delivery address so the seller knows where to ship.
  *
- * If the buyer skips this step (taps "I'll add it later") they go straight to
- * the order confirmation page — the seller will follow up for the address.
+ * Works for both authenticated and guest buyers:
+ * - Authenticated: standard JWT authorisation.
+ * - Guest: the unguessable trackingToken stored in checkoutStore acts as
+ *   proof-of-purchase and authorises the PATCH call without an account.
+ *
+ * Pre-fills fields from the checkout delivery details when available.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCheckoutStore } from '@/stores/checkoutStore'
+import { useAuthStore } from '@/stores/authStore'
 import { ordersAPI } from '@/lib/api'
 import Button from '@/components/ui/Button'
 
@@ -26,28 +31,41 @@ function inputClass(hasError?: boolean) {
 export default function DeliveryAfterPage() {
   const router = useRouter()
 
-  const pendingOrderId   = useCheckoutStore((state) => state.pendingOrderId)
-  const setPendingOrderId = useCheckoutStore((state) => state.setPendingOrderId)
-  const setOrderShopToken = useCheckoutStore((state) => state.setOrderShopToken)
-  const shopToken         = useCheckoutStore((state) => state.shopToken)
+  const pendingOrderId            = useCheckoutStore((state) => state.pendingOrderId)
+  const pendingOrderTrackingToken = useCheckoutStore((state) => state.pendingOrderTrackingToken)
+  const setPendingOrderId         = useCheckoutStore((state) => state.setPendingOrderId)
+  const setPendingOrderTrackingToken = useCheckoutStore((state) => state.setPendingOrderTrackingToken)
+  const setOrderShopToken         = useCheckoutStore((state) => state.setOrderShopToken)
+  const shopToken                 = useCheckoutStore((state) => state.shopToken)
+  // If the buyer already entered delivery details during checkout, pre-fill them
+  const savedDelivery             = useCheckoutStore((state) => state.delivery)
 
-  const [address, setAddress]   = useState('')
-  const [city, setCity]         = useState('')
-  const [state, setState]       = useState('')
-  const [zip, setZip]           = useState('')
-  const [name, setName]         = useState('')
-  const [phone, setPhone]       = useState('')
+  const user = useAuthStore((state) => state.user)
 
-  const [errors, setErrors]     = useState<Record<string, string>>({})
+  const [address, setAddress] = useState(savedDelivery?.deliveryAddress && savedDelivery.deliveryAddress !== 'To be confirmed' ? savedDelivery.deliveryAddress : '')
+  const [city, setCity]       = useState(savedDelivery?.deliveryCity || '')
+  const [state, setState]     = useState(savedDelivery?.deliveryState || '')
+  const [zip, setZip]         = useState(savedDelivery?.deliveryZip || '')
+  const [name, setName]       = useState(savedDelivery?.customerName || user?.name || '')
+  const [phone, setPhone]     = useState(savedDelivery?.customerPhone || user?.phone || '')
+
+  const [errors, setErrors]       = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [apiError, setApiError] = useState('')
+  const [apiError, setApiError]   = useState('')
+  const [hydrated, setHydrated]   = useState(false)
 
-  // If there's no pending order (direct navigation / already submitted),
-  // redirect to home
-  if (!pendingOrderId) {
-    router.replace('/')
-    return null
-  }
+  useEffect(() => { setHydrated(true) }, [])
+
+  // Redirect to home when there is no pending order (direct navigation / already submitted)
+  useEffect(() => {
+    if (hydrated && !pendingOrderId) router.replace('/')
+  }, [hydrated, pendingOrderId, router])
+
+  if (!hydrated || !pendingOrderId) return null
+
+  // Check if delivery is already fully captured (authenticated flow with saved address)
+  // in which case the address fields will be pre-filled and valid
+  const hasPrefilledAddress = !!(address && city && name && phone)
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -73,12 +91,20 @@ export default function DeliveryAfterPage() {
         deliveryZip:     zip.trim() || '00100',
         deliveryName:    name.trim(),
         deliveryPhone:   phone.trim(),
+        // Guest proof-of-purchase — backend accepts this in lieu of a JWT
+        ...(pendingOrderTrackingToken ? { trackingToken: pendingOrderTrackingToken } : {}),
       })
-      // Save shop token for order page then clear the pending id
       if (shopToken) setOrderShopToken(pendingOrderId, shopToken)
       const id = pendingOrderId
+      const token = pendingOrderTrackingToken
       setPendingOrderId(null)
-      router.replace(`/order/${id}?new=1`)
+      setPendingOrderTrackingToken(null)
+      // Navigate to order confirmation — guests use tracking token, auth buyers use order ID
+      if (token && !user) {
+        router.replace(`/order/${id}?trackingToken=${encodeURIComponent(token)}&new=1`)
+      } else {
+        router.replace(`/order/${id}?new=1`)
+      }
     } catch (err: any) {
       setApiError(
         err?.response?.data?.message || err?.message || 'Could not save your address. Please try again.',
@@ -91,8 +117,14 @@ export default function DeliveryAfterPage() {
   const handleSkip = () => {
     if (shopToken) setOrderShopToken(pendingOrderId, shopToken)
     const id = pendingOrderId
+    const token = pendingOrderTrackingToken
     setPendingOrderId(null)
-    router.replace(`/order/${id}?new=1`)
+    setPendingOrderTrackingToken(null)
+    if (token && !user) {
+      router.replace(`/order/${id}?trackingToken=${encodeURIComponent(token)}&new=1`)
+    } else {
+      router.replace(`/order/${id}?new=1`)
+    }
   }
 
   return (
@@ -108,7 +140,9 @@ export default function DeliveryAfterPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Payment confirmed! 🎉</h1>
           <p className="text-gray-500 mt-2 text-sm max-w-sm">
-            Your order is placed. Enter your delivery address so the seller knows where to send it.
+            {hasPrefilledAddress
+              ? 'Your order is placed. Confirm your delivery address below.'
+              : 'Your order is placed. Enter your delivery address so the seller knows where to send it.'}
           </p>
         </div>
 
@@ -126,9 +160,7 @@ export default function DeliveryAfterPage() {
             {/* Recipient */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Recipient Name *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recipient Name *</label>
                 <input
                   type="text"
                   value={name}
@@ -139,9 +171,7 @@ export default function DeliveryAfterPage() {
                 {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Phone *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone *</label>
                 <input
                   type="tel"
                   value={phone}
@@ -155,9 +185,7 @@ export default function DeliveryAfterPage() {
 
             {/* Street address */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Street / Building Address *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Street / Building Address *</label>
               <input
                 type="text"
                 value={address}
@@ -171,9 +199,7 @@ export default function DeliveryAfterPage() {
             {/* City + State */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Town / City *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Town / City *</label>
                 <input
                   type="text"
                   value={city}
@@ -184,9 +210,7 @@ export default function DeliveryAfterPage() {
                 {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  County / Region
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">County / Region</label>
                 <input
                   type="text"
                   value={state}
@@ -199,9 +223,7 @@ export default function DeliveryAfterPage() {
 
             {/* Postal code */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Postal Code
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
               <input
                 type="text"
                 value={zip}
@@ -211,11 +233,7 @@ export default function DeliveryAfterPage() {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full py-3"
-              disabled={submitting}
-            >
+            <Button type="submit" className="w-full py-3" disabled={submitting}>
               {submitting ? 'Saving…' : 'Save delivery address'}
             </Button>
           </form>

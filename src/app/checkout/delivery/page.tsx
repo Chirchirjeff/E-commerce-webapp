@@ -20,11 +20,11 @@ import { CheckoutDeliverySkeleton } from '@/components/skeletons/PageSkeletons'
 type Contact = Pick<DeliveryDetails, 'customerName' | 'customerEmail' | 'customerPhone'>
 const NEW_ADDRESS = 'new'
 
-function validateContact(data: Contact): Record<string, string> {
+function validateContact(data: Contact, requireEmail: boolean): Record<string, string> {
   const errors: Record<string, string> = {}
   if (!data.customerName.trim())  errors.customerName  = 'Full name is required'
-  if (!data.customerEmail.trim() || !data.customerEmail.includes('@'))
-                                   errors.customerEmail = 'Valid email is required'
+  if (requireEmail && (!data.customerEmail.trim() || !data.customerEmail.includes('@')))
+                                   errors.customerEmail = 'Valid email address is required'
   if (!data.customerPhone.trim()) errors.customerPhone = 'Phone number is required'
   return errors
 }
@@ -55,21 +55,24 @@ export default function DeliveryPage() {
   const [contact, setContact] = useState<Contact>({ customerName: '', customerEmail: '', customerPhone: '' })
   const [selectedId, setSelectedId] = useState<string>(NEW_ADDRESS)
   const [draft, setDraft] = useState<AddressDraft>(EMPTY_ADDRESS)
-  const [saveNew, setSaveNew] = useState(true)
+  const [saveNew, setSaveNew] = useState(false)
   const [makeDefault, setMakeDefault] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [listOpen, setListOpen] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
   const initialisedFor = useRef<string | null>(null)
 
+  // Wait for hydration before rendering to avoid SSR mismatches
+  useEffect(() => { setHydrated(true) }, [])
+
   useEffect(() => {
-    if (!token) { router.replace('/checkout/account'); return }
+    if (!token) return
     // Pull the latest address book (it may have been edited on the account page).
     authAPI.getMe().then((res) => setUser(res.data.user as BuyerProfile)).catch(() => {})
-  }, [token, router, setUser])
+  }, [token, setUser])
 
-  // Pre-fill once per buyer. Details saved earlier in this checkout are only
-  // reused for the buyer who entered them; otherwise start from the default.
+  // Pre-fill for authenticated buyers
   useEffect(() => {
     if (!user || initialisedFor.current === user.id) return
     initialisedFor.current = user.id
@@ -87,7 +90,7 @@ export default function DeliveryPage() {
       return
     }
     setContact({
-      customerName: fallback?.recipientName || user.name || '',
+      customerName:  fallback?.recipientName || user.name || '',
       customerEmail: user.email || '',
       customerPhone: fallback?.phone || user.phone || '',
     })
@@ -95,12 +98,19 @@ export default function DeliveryPage() {
     setMakeDefault(user.addresses.length === 0)
   }, [user, saved, deliveryBuyerId])
 
+  // Pre-fill for guest buyers (re-use previous delivery if any)
+  useEffect(() => {
+    if (user || !saved || initialisedFor.current === 'guest') return
+    initialisedFor.current = 'guest'
+    setContact({ customerName: saved.customerName, customerEmail: saved.customerEmail, customerPhone: saved.customerPhone })
+    setDraft({ ...EMPTY_ADDRESS, addressLine: saved.deliveryAddress, city: saved.deliveryCity, state: saved.deliveryState, postalCode: saved.deliveryZip })
+  }, [user, saved])
+
   const selectAddress = (id: string) => {
     setSelectedId(id)
     setListOpen(false)
     setMakeDefault(id === NEW_ADDRESS && addresses.length === 0)
     setErrors({})
-    // A saved address carries its own recipient — use it as the order contact.
     const address = addresses.find((a) => a.id === id)
     if (address) setContact((prev) => ({ ...prev, customerName: address.recipientName, customerPhone: address.phone }))
   }
@@ -113,45 +123,56 @@ export default function DeliveryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) { router.replace('/checkout/account'); return }
+
+    const isAuthenticated = !!user
     const isNew = selectedId === NEW_ADDRESS
     const selected = addresses.find((a) => a.id === selectedId)
-    const errs = { ...validateContact(contact), ...(isNew ? validateAddress(draft, false) : {}) }
+
+    // Guests don't have an email on record — only require it for account holders
+    const errs = {
+      ...validateContact(contact, isAuthenticated),
+      ...(isNew ? validateAddress(draft, false) : {}),
+    }
     if (!isNew && !selected) errs.form = 'Please choose a delivery address.'
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     const address = isNew ? draft : selected!
     setSubmitting(true)
+
     try {
-      const saveThisAddress = isNew && saveNew && !atLimit
-      if (saveThisAddress) {
-        await authAPI.saveAddress({
-          ...draft, recipientName: contact.customerName, phone: contact.customerPhone, isDefault: makeDefault,
-        })
-      } else if (!isNew && makeDefault && !selected!.isDefault) {
-        await authAPI.setDefaultAddress(selected!.id!)
+      // If authenticated, optionally save the address to their account
+      if (isAuthenticated) {
+        const saveThisAddress = isNew && saveNew && !atLimit
+        if (saveThisAddress) {
+          await authAPI.saveAddress({
+            ...draft, recipientName: contact.customerName, phone: contact.customerPhone, isDefault: makeDefault,
+          })
+        } else if (!isNew && makeDefault && !selected!.isDefault) {
+          await authAPI.setDefaultAddress(selected!.id!)
+        }
+        if (saveThisAddress || makeDefault) {
+          authAPI.getMe().then((res) => setUser(res.data.user as BuyerProfile)).catch(() => {})
+        }
       }
-      if (saveThisAddress || makeDefault) {
-        authAPI.getMe().then((res) => setUser(res.data.user as BuyerProfile)).catch(() => {})
-      }
+
       setDelivery({
         ...contact,
-        deliveryAddress: address.addressLine, deliveryCity: address.city,
-        deliveryState: address.state, deliveryZip: address.postalCode,
-      }, user.id)
+        deliveryAddress: address.addressLine,
+        deliveryCity:    address.city,
+        deliveryState:   address.state,
+        deliveryZip:     address.postalCode,
+      }, user?.id ?? null)
     } catch {
       setErrors({ form: 'We could not save your delivery address. Please try again.' })
       setSubmitting(false)
       return
     }
-    // Persist the shop token so the order confirmation page can link back to
-    // the correct shop even after the cart has been cleared.
+
     if (cartShopToken) setShopToken(cartShopToken)
     router.push('/checkout/review')
   }
 
-  // Guard: no items
-  if (!token) return <CheckoutDeliverySkeleton />
+  if (!hydrated) return <CheckoutDeliverySkeleton />
 
   if (items.length === 0) {
     return (
@@ -167,6 +188,8 @@ export default function DeliveryPage() {
       errors[field] ? 'border-red-500' : 'border-gray-300'
     }`
 
+  const isAuthenticated = !!user
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <CheckoutProgress current="delivery" />
@@ -177,7 +200,7 @@ export default function DeliveryPage() {
           <form onSubmit={handleSubmit} noValidate className="space-y-6">
             {errors.form && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errors.form}</p>}
 
-            {/* Signed-in buyer — easy to spot and change on a shared device */}
+            {/* Signed-in buyer banner */}
             {user && (
               <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
                 <p className="text-gray-700 min-w-0 truncate">
@@ -190,95 +213,125 @@ export default function DeliveryPage() {
               </div>
             )}
 
-            {/* Delivery address */}
-            <section className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Deliver to</h2>
-                {addresses.length > 0 && <Link href="/account" className="text-sm text-primary-600 hover:text-primary-700">Manage addresses</Link>}
+            {/* Guest banner — offer to sign in without forcing it */}
+            {!user && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                <p className="text-amber-800">
+                  <span className="font-medium">Checking out as a guest.</span>{' '}
+                  Sign in to use saved addresses and track orders easily.
+                </p>
+                <Link
+                  href={`/checkout/account?next=${encodeURIComponent('/checkout/delivery')}`}
+                  className="shrink-0 font-medium text-primary-600 hover:text-primary-700 whitespace-nowrap"
+                >
+                  Sign in
+                </Link>
               </div>
+            )}
 
-              {addresses.length > 0 && !listOpen ? (
-                // Collapsed: just the chosen address, with a way to change it.
-                <div className="flex items-start justify-between gap-3 rounded-lg border border-primary-600 ring-1 ring-primary-600 bg-primary-50/40 p-4">
-                  {(() => {
-                    const chosen = addresses.find((a) => a.id === selectedId)
-                    return chosen ? (
-                      <span className="min-w-0">
-                        <span className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
-                          {chosen.label}
-                          {chosen.isDefault && <span className="text-xs font-semibold text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">Default</span>}
-                        </span>
-                        <span className="block text-sm text-gray-700">{chosen.recipientName} · {chosen.phone}</span>
-                        <span className="block text-sm text-gray-500">{formatAddress(chosen)}</span>
-                      </span>
-                    ) : (
-                      <span className="font-medium text-gray-900">A different address</span>
-                    )
-                  })()}
-                  <button type="button" onClick={() => setListOpen(true)} aria-expanded={false} aria-controls="delivery-address-list"
-                    className="shrink-0 flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
-                    Change
-                    <span className="text-gray-400">({addresses.length} saved)</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
+            {/* Delivery address — only shown for authenticated buyers */}
+            {isAuthenticated && (
+              <section className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Deliver to</h2>
+                  {addresses.length > 0 && <Link href="/account" className="text-sm text-primary-600 hover:text-primary-700">Manage addresses</Link>}
                 </div>
-              ) : (
-              <div id="delivery-address-list" className="space-y-3" role="radiogroup" aria-label="Delivery address">
-                {addresses.length > 0 && (
-                  <button type="button" onClick={() => setListOpen(false)} aria-expanded={true} aria-controls="delivery-address-list"
-                    className="flex w-full items-center justify-end gap-1 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Collapse
-                    <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
+
+                {addresses.length > 0 && !listOpen ? (
+                  <div className="flex items-start justify-between gap-3 rounded-lg border border-primary-600 ring-1 ring-primary-600 bg-primary-50/40 p-4">
+                    {(() => {
+                      const chosen = addresses.find((a) => a.id === selectedId)
+                      return chosen ? (
+                        <span className="min-w-0">
+                          <span className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                            {chosen.label}
+                            {chosen.isDefault && <span className="text-xs font-semibold text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">Default</span>}
+                          </span>
+                          <span className="block text-sm text-gray-700">{chosen.recipientName} · {chosen.phone}</span>
+                          <span className="block text-sm text-gray-500">{formatAddress(chosen)}</span>
+                        </span>
+                      ) : (
+                        <span className="font-medium text-gray-900">A different address</span>
+                      )
+                    })()}
+                    <button type="button" onClick={() => setListOpen(true)}
+                      className="shrink-0 flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                      Change
+                      <span className="text-gray-400">({addresses.length} saved)</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3" role="radiogroup" aria-label="Delivery address">
+                    {addresses.length > 0 && (
+                      <button type="button" onClick={() => setListOpen(false)}
+                        className="flex w-full items-center justify-end gap-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        Collapse
+                        <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                    )}
+                    {addresses.map((address) => {
+                      const checked = selectedId === address.id
+                      return (
+                        <label key={address.id} className={`flex gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${checked ? 'border-primary-600 ring-1 ring-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}>
+                          <input type="radio" name="address" className="mt-1 h-4 w-4 text-primary-600" checked={checked} onChange={() => selectAddress(address.id!)} />
+                          <span className="min-w-0">
+                            <span className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                              {address.label}
+                              {address.isDefault && <span className="text-xs font-semibold text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">Default</span>}
+                            </span>
+                            <span className="block text-sm text-gray-700">{address.recipientName} · {address.phone}</span>
+                            <span className="block text-sm text-gray-500">{formatAddress(address)}</span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                    <label className={`flex gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${selectedId === NEW_ADDRESS ? 'border-primary-600 ring-1 ring-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <input type="radio" name="address" className="mt-1 h-4 w-4 text-primary-600" checked={selectedId === NEW_ADDRESS} onChange={() => selectAddress(NEW_ADDRESS)} />
+                      <span className="font-medium text-gray-900">{addresses.length ? 'Deliver to a different address' : 'Add a delivery address'}</span>
+                    </label>
+                  </div>
                 )}
-                {addresses.map((address) => {
-                  const checked = selectedId === address.id
-                  return (
-                    <label key={address.id} className={`flex gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${checked ? 'border-primary-600 ring-1 ring-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <input type="radio" name="address" className="mt-1 h-4 w-4 text-primary-600" checked={checked} onChange={() => selectAddress(address.id!)} />
-                      <span className="min-w-0">
-                        <span className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
-                          {address.label}
-                          {address.isDefault && <span className="text-xs font-semibold text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">Default</span>}
-                        </span>
-                        <span className="block text-sm text-gray-700">{address.recipientName} · {address.phone}</span>
-                        <span className="block text-sm text-gray-500">{formatAddress(address)}</span>
-                      </span>
-                    </label>
-                  )
-                })}
 
-                <label className={`flex gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${selectedId === NEW_ADDRESS ? 'border-primary-600 ring-1 ring-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <input type="radio" name="address" className="mt-1 h-4 w-4 text-primary-600" checked={selectedId === NEW_ADDRESS} onChange={() => selectAddress(NEW_ADDRESS)} />
-                  <span className="font-medium text-gray-900">{addresses.length ? 'Deliver to a different address' : 'Add a delivery address'}</span>
-                </label>
-              </div>
-              )}
+                {selectedId === NEW_ADDRESS && (
+                  <div className="mt-5 space-y-4">
+                    <AddressFields value={draft} onChange={(next) => { setDraft(next); setErrors({}) }} errors={errors} withRecipient={false} idPrefix="checkout-address" />
+                    {atLimit ? (
+                      <p className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                        You&apos;ve saved the maximum of {MAX_SAVED_ADDRESSES} addresses.{' '}
+                        <Link href="/account" className="font-medium underline">Remove one</Link> to save more.
+                      </p>
+                    ) : (
+                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" checked={saveNew} onChange={(e) => { setSaveNew(e.target.checked); if (!e.target.checked) setMakeDefault(false) }} className="h-4 w-4 rounded border-gray-300 text-primary-600" />
+                        Save this address to my account
+                      </label>
+                    )}
+                  </div>
+                )}
 
-              {selectedId === NEW_ADDRESS && (
-                <div className="mt-5 space-y-4">
-                  <AddressFields value={draft} onChange={(next) => { setDraft(next); setErrors({}) }} errors={errors} withRecipient={false} idPrefix="checkout-address" />
-                  {atLimit ? (
-                    <p className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-                      You&apos;ve saved the maximum of {MAX_SAVED_ADDRESSES} addresses, so this one will be used for this order only.{' '}
-                      <Link href="/account" className="font-medium underline">Remove one</Link> to save more.
-                    </p>
-                  ) : (
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input type="checkbox" checked={saveNew} onChange={(e) => { setSaveNew(e.target.checked); if (!e.target.checked) setMakeDefault(false) }} className="h-4 w-4 rounded border-gray-300 text-primary-600" />
-                      Save this address to my account
-                    </label>
-                  )}
-                </div>
-              )}
+                {(selectedId !== NEW_ADDRESS ? !addresses.find((a) => a.id === selectedId)?.isDefault : saveNew && !atLimit) && (
+                  <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary-600" />
+                    Make this my default delivery address
+                  </label>
+                )}
+              </section>
+            )}
 
-              {(selectedId !== NEW_ADDRESS ? !addresses.find((a) => a.id === selectedId)?.isDefault : saveNew && !atLimit) && (
-                <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary-600" />
-                  Make this my default delivery address
-                </label>
-              )}
-            </section>
+            {/* Guest address entry */}
+            {!isAuthenticated && (
+              <section className="bg-white rounded-lg border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery address</h2>
+                <AddressFields
+                  value={draft}
+                  onChange={(next) => { setDraft(next); setErrors({}) }}
+                  errors={errors}
+                  withRecipient={false}
+                  idPrefix="guest-checkout-address"
+                />
+              </section>
+            )}
 
             {/* Contact for this order */}
             <section className="bg-white rounded-lg border border-gray-200 p-6">
@@ -301,11 +354,16 @@ export default function DeliveryPage() {
                     {errors.customerPhone && <p className="mt-1 text-sm text-red-600">{errors.customerPhone}</p>}
                   </div>
                   <div>
-                    <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                    <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address {isAuthenticated ? '*' : <span className="text-gray-400 font-normal">(optional)</span>}
+                    </label>
                     <input id="customerEmail" name="customerEmail" type="email"
                       value={contact.customerEmail} onChange={handleContactChange}
                       className={inputClass('customerEmail')} placeholder="jane@example.com" />
                     {errors.customerEmail && <p className="mt-1 text-sm text-red-600">{errors.customerEmail}</p>}
+                    {!isAuthenticated && (
+                      <p className="mt-1 text-xs text-gray-400">We'll send a payment confirmation if provided.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -337,7 +395,7 @@ export default function DeliveryPage() {
               <span>Total</span>
               <span>{formatPrice(getTotal())}</span>
             </div>
-            <p className="mt-3 text-xs text-gray-400 text-center">Shipping calculated at next step</p>
+            <p className="mt-3 text-xs text-gray-400 text-center">Delivery calculated by seller after ordering</p>
           </div>
         </aside>
       </div>

@@ -44,23 +44,43 @@ export default function PaymentPage() {
 
   const delivery            = useCheckoutStore((state) => state.delivery)
   const deliveryBuyerId     = useCheckoutStore((state) => state.deliveryBuyerId)
-  const buyerId             = useAuthStore((state) => state.user?.id)
   const savedPhone          = useCheckoutStore((state) => state.mpesaPhone)
   const setMpesaPhone       = useCheckoutStore((state) => state.setMpesaPhone)
   const setCheckoutRequestId = useCheckoutStore((state) => state.setCheckoutRequestId)
   const setOrderNumber      = useCheckoutStore((state) => state.setOrderNumber)
+  const setShopToken        = useCheckoutStore((state) => state.setShopToken)
+  const cartShopToken       = useCartStore((state) => state.shopToken)
 
-  const [phone, setPhone]     = useState(savedPhone || delivery?.customerPhone || '')
+  const user    = useAuthStore((state) => state.user)
+  const buyerId = user?.id ?? null
+
+  const [hydrated, setHydrated] = useState(false)
+  const [phone, setPhone]       = useState('')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [apiError, setApiError]   = useState<string | null>(null)
+  const [apiError, setApiError] = useState<string | null>(null)
+
+  useEffect(() => { setHydrated(true) }, [])
+
+  // Pre-fill phone once hydrated
+  useEffect(() => {
+    if (!hydrated) return
+    const best = savedPhone || delivery?.customerPhone || user?.phone || ''
+    setPhone(best)
+  }, [hydrated, savedPhone, delivery, user])
 
   // Guard: must have delivery details
+  // For authenticated buyers, details must belong to them.
+  // Guest buyers (deliveryBuyerId === null) pass through.
   useEffect(() => {
-    if (!delivery || deliveryBuyerId !== buyerId) router.replace('/checkout/delivery')
-  }, [delivery, deliveryBuyerId, buyerId, router])
+    if (!hydrated) return
+    if (!delivery) { router.replace('/checkout/delivery'); return }
+    if (deliveryBuyerId !== null && buyerId && deliveryBuyerId !== buyerId) {
+      router.replace('/checkout/delivery')
+    }
+  }, [hydrated, delivery, deliveryBuyerId, buyerId, router])
 
-  if (!delivery || deliveryBuyerId !== buyerId || items.length === 0) return <CheckoutReviewSkeleton />
+  if (!hydrated || !delivery || items.length === 0) return <CheckoutReviewSkeleton />
 
   const total = getTotal()
 
@@ -73,12 +93,13 @@ export default function PaymentPage() {
     setIsSubmitting(true)
 
     try {
+      const cleanPhone = phone.replace(/\s+/g, '')
       const response = await mpesaAPI.initiateStkPush({
-        phoneNumber: phone.replace(/\s+/g, ''),
+        phoneNumber: cleanPhone,
         amount: total,
         orderPayload: {
           customerName:    delivery.customerName,
-          customerEmail:   delivery.customerEmail,
+          customerEmail:   delivery.customerEmail || null,
           customerPhone:   delivery.customerPhone,
           deliveryAddress: delivery.deliveryAddress,
           deliveryCity:    delivery.deliveryCity,
@@ -91,11 +112,13 @@ export default function PaymentPage() {
             price:     item.price,
           })),
           total,
+          // Link order to buyer account when authenticated
+          buyerId: buyerId ?? null,
         },
       })
 
-      // Persist phone + request ID + order number before navigating
-      setMpesaPhone(phone)
+      if (cartShopToken) setShopToken(cartShopToken)
+      setMpesaPhone(cleanPhone)
       setCheckoutRequestId(response.data.checkoutRequestId)
       setOrderNumber(response.data.orderNumber)
       router.push('/checkout/processing')
@@ -104,7 +127,7 @@ export default function PaymentPage() {
         err?.response?.data?.message ||
         err?.message ||
         'Could not initiate payment. Please try again.'
-      setApiError(msg)
+      setApiError(Array.isArray(msg) ? msg[0] : msg)
     } finally {
       setIsSubmitting(false)
     }

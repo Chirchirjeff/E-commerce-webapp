@@ -201,8 +201,23 @@ export const ordersAPI = {
   create: (orderData: any) =>
     apiClient.post('/orders', orderData),
 
-  getOne: (id: string) =>
-    apiClient.get(`/orders/${id}`),
+  /**
+   * Get an order by ID.
+   * - Authenticated buyers: JWT is sent automatically; no extra params needed.
+   * - Guest buyers: pass the trackingToken received at payment time so the
+   *   backend can verify ownership without a buyer account.
+   */
+  getOne: (id: string, guestTrackingToken?: string) => {
+    const params = guestTrackingToken ? `?trackingToken=${encodeURIComponent(guestTrackingToken)}` : ''
+    return apiClient.get(`/orders/${id}${params}`)
+  },
+
+  /**
+   * Get an order by its unguessable trackingToken — public, no auth required.
+   * Used for guest order confirmation immediately after payment.
+   */
+  getByTrackingToken: (trackingToken: string) =>
+    apiClient.get(`/orders/public/token/${encodeURIComponent(trackingToken)}`),
 
   track: (token: string) =>
     apiClient.get(`/orders/track/${token}`),
@@ -211,8 +226,10 @@ export const ordersAPI = {
     apiClient.get(`/orders/mine/number/${encodeURIComponent(orderNumber)}`),
 
   /**
-   * Update delivery address on a buyer's own paid order.
-   * Used by the post-payment delivery-after page.
+   * Update delivery address on a paid order.
+   * - Authenticated buyers: JWT is sent automatically.
+   * - Guest buyers: include `trackingToken` in the data payload so the backend
+   *   can verify ownership without a buyer account.
    */
   updateDelivery: (
     orderId: string,
@@ -224,6 +241,8 @@ export const ordersAPI = {
       deliveryName?: string
       deliveryPhone?: string
       deliveryEmail?: string
+      /** Guest proof-of-purchase token — required when not authenticated. */
+      trackingToken?: string
     },
   ) => apiClient.patch(`/orders/${orderId}/delivery`, data),
 }
@@ -266,6 +285,8 @@ export interface StkPushPayload {
     shopId: string
     items: Array<{ productId: string; quantity: number; price: number }>
     total: number
+    /** Optional: authenticated buyer's userId — links the order to their account. */
+    buyerId?: string | null
   }
 }
 

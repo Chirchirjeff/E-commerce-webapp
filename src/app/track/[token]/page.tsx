@@ -33,7 +33,7 @@ export default function TrackOrderPage() {
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ['track-order', token],
-    queryFn: async () => (await ordersAPI.track(token)).data as Order,
+    queryFn: async () => (await ordersAPI.getByTrackingToken(token)).data as Order,
     enabled: !!token,
     refetchInterval: 30_000,
   })

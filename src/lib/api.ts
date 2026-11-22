@@ -257,7 +257,7 @@ export interface StkPushPayload {
   amount: number
   orderPayload: {
     customerName: string
-    customerEmail: string
+    customerEmail: string | null
     customerPhone: string
     deliveryAddress: string
     deliveryCity: string

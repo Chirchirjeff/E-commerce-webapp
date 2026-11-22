@@ -102,7 +102,7 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
         amount: total,
         orderPayload: {
           customerName:    'Guest',
-          customerEmail:   '',
+          customerEmail:   null,
           customerPhone:   cleanPhone,
           deliveryAddress: 'To be confirmed',
           deliveryCity:    'Nairobi',

@@ -125,10 +125,16 @@ export function QuickPayModal({ isOpen, onClose }: QuickPayModalProps) {
       onClose()
       router.push('/checkout/processing')
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-        err?.message ||
-        'Could not initiate payment. Please try again.'
+      const raw: unknown = err?.response?.data?.message
+      // Show the first item if it's an array, otherwise fall back to a clean generic message
+      const detail = Array.isArray(raw) ? raw[0] : typeof raw === 'string' ? raw : null
+      // Never show raw Safaricom JSON or internal error details to the buyer
+      const isTechnical = typeof detail === 'string' && (
+        detail.includes('{') || detail.includes('errorCode') || detail.includes('STK push')
+      )
+      setError(isTechnical || !detail
+        ? 'Payment request failed. Please check your number and try again.'
+        : detail
       )
     } finally {
       setLoading(false)

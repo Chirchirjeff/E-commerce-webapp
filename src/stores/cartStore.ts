@@ -47,7 +47,10 @@ export const useCartStore = create<CartState>()(
                 productId: product.id,
                 product,
                 quantity,
-                price: product.price,
+                // Use salePrice when available — that's the actual price the buyer pays
+                price: product.salePrice != null && product.salePrice < product.price
+                  ? product.salePrice
+                  : product.price,
               },
             ],
             shopId: product.shopId,

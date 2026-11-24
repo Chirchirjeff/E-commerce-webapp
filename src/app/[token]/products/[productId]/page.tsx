@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -10,7 +11,8 @@ import { ProductShareButton } from '@/components/products/ProductShareButton'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { productsAPI } from '@/lib/api'
-import { formatPrice } from '@/lib/utils'
+import { effectivePrice, formatPrice } from '@/lib/utils'
+import { useShop, isVerifiedShop } from '@/hooks/useShop'
 import { ProductDetail } from '@/types'
 import { ProductDetailSkeleton } from '@/components/skeletons/PageSkeletons'
 
@@ -33,6 +35,13 @@ export default function ProductDetailsPage() {
     enabled: !!productId,
   })
 
+  // Shop name / verified badge for the Buy Now sheet (cached from the storefront)
+  const { data: fetchedShop } = useShop(product && !product.shop ? token : undefined)
+  const shop = product?.shop ?? fetchedShop
+
+  // The mobile sticky buy bar is fixed to the bottom — pad the page while it shows
+  const [stickyBarVisible, setStickyBarVisible] = useState(false)
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -52,7 +61,7 @@ export default function ProductDetailsPage() {
           </svg>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h1>
           <p className="text-gray-600 mb-4">
-            The product you're looking for doesn't exist.
+            The product you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link href={`/${token}`}>
             <Button>Back to Shop</Button>
@@ -75,7 +84,11 @@ export default function ProductDetailsPage() {
     : []
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div
+      className={`bg-gray-50 min-h-screen ${
+        stickyBarVisible ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0' : ''
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm">
@@ -107,8 +120,13 @@ export default function ProductDetailsPage() {
 
               <div className="flex items-center gap-4 mb-4">
                 <span className="text-4xl font-bold text-primary-600">
-                  {formatPrice(product.price)}
+                  {formatPrice(effectivePrice(product))}
                 </span>
+                {effectivePrice(product) < product.price && (
+                  <span className="text-xl text-gray-400 line-through">
+                    {formatPrice(product.price)}
+                  </span>
+                )}
                 {product.stockQuantity > 0 && (
                   <Badge variant="success">In Stock</Badge>
                 )}
@@ -129,7 +147,13 @@ export default function ProductDetailsPage() {
 
             {/* Add to Cart Form */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <AddToCartForm product={product} shopId={product.shopId} shopToken={token} />
+              <AddToCartForm
+                product={product}
+                shopToken={token}
+                shopName={shop?.name}
+                shopVerified={isVerifiedShop(shop)}
+                onStickyBarChange={setStickyBarVisible}
+              />
             </div>
 
             {/* Share Product Button */}

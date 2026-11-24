@@ -8,7 +8,6 @@ import { Product } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import { StarRating, formatReviewCount } from '@/components/ui/StarRating'
 import { ProductCardCarousel } from './ProductCardCarousel'
-import { useCartStore } from '@/stores/cartStore'
 import { cn } from '@/lib/utils'
 import {
   PRODUCT_GRID_CLASSES,
@@ -57,12 +56,6 @@ function discountPercent(product: Product): number | null {
 
 function ProductGridComponent({ products, shopToken, isLoading }: ProductGridProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const addToCart = useCartStore((state) => state.addItem)
-
-  const handleAddToCart = (product: Product, quantity: number) => {
-    addToCart(product, quantity, shopToken)
-  }
-
   if (isLoading) return <ProductGridSkeleton />
 
   if (products.length === 0) {
@@ -200,7 +193,6 @@ function ProductGridComponent({ products, shopToken, isLoading }: ProductGridPro
           product={selectedProduct}
           isOpen={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onAddToCart={handleAddToCart}
           shopToken={shopToken}
         />
       )}

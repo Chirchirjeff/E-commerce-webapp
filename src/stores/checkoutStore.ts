@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { Product } from '@/types'
 
 export interface DeliveryDetails {
   customerName: string
@@ -9,6 +10,30 @@ export interface DeliveryDetails {
   deliveryCity: string
   deliveryState: string
   deliveryZip: string
+}
+
+/**
+ * Where an in-flight payment came from.
+ * - 'cart':   paying for the cart → the cart is cleared once payment succeeds.
+ * - 'buyNow': express single-item purchase that never touched the cart → the
+ *             cart is left exactly as the buyer had it.
+ */
+export type CheckoutSource = 'buyNow' | 'cart'
+
+export interface PendingPaymentItem {
+  product: Product
+  quantity: number
+  price: number
+}
+
+/** Snapshot of the order an STK push was sent for, read by /checkout/processing. */
+export interface PendingPayment {
+  source: CheckoutSource
+  amount: number
+  shopId: string
+  shopToken: string | null
+  shopName?: string
+  items: PendingPaymentItem[]
 }
 
 interface CheckoutState {
@@ -31,6 +56,8 @@ interface CheckoutState {
   shopToken: string | null
   /** Shop link token the buyer actually checked out from, keyed by order id. */
   orderShopTokens: Record<string, string>
+  /** The order the current STK push was sent for (source, amount, items). */
+  pendingPayment: PendingPayment | null
 
   setDelivery: (details: DeliveryDetails, buyerId: string | null) => void
   setMpesaPhone: (phone: string) => void
@@ -40,6 +67,7 @@ interface CheckoutState {
   setPendingOrderTrackingToken: (token: string | null) => void
   setShopToken: (token: string) => void
   setOrderShopToken: (orderId: string, token: string) => void
+  setPendingPayment: (payment: PendingPayment | null) => void
   clearCheckout: () => void
   clearBuyerDetails: () => void
 }
@@ -56,6 +84,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       pendingOrderTrackingToken: null,
       shopToken: null,
       orderShopTokens: {},
+      pendingPayment: null,
 
       // When the buyer edits their phone (e.g. after a failed payment), drop the
       // M-Pesa number remembered from the previous attempt so the payment page
@@ -76,6 +105,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       setShopToken: (token) => set({ shopToken: token }),
       setOrderShopToken: (orderId, token) =>
         set((state) => ({ orderShopTokens: { ...state.orderShopTokens, [orderId]: token } })),
+      setPendingPayment: (payment) => set({ pendingPayment: payment }),
       clearCheckout: () =>
         set({
           delivery: null,
@@ -85,6 +115,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           orderNumber: null,
           pendingOrderId: null,
           pendingOrderTrackingToken: null,
+          pendingPayment: null,
         }),
       clearBuyerDetails: () =>
         set({
@@ -95,6 +126,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           orderNumber: null,
           pendingOrderId: null,
           pendingOrderTrackingToken: null,
+          pendingPayment: null,
         }),
     }),
     {

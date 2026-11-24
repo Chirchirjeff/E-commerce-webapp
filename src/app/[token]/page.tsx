@@ -12,8 +12,9 @@ import { SearchBar } from '@/components/products/SearchBar'
 import { CollectionsSkeleton } from '@/components/skeletons/PageSkeletons'
 import { useShopCategories } from '@/hooks/useShopCategories'
 import { useShopCollections } from '@/hooks/useShopCollections'
-import { shopAPI, productsAPI } from '@/lib/api'
-import { Shop, Product } from '@/types'
+import { useShop } from '@/hooks/useShop'
+import { productsAPI } from '@/lib/api'
+import { Product } from '@/types'
 import { cn } from '@/lib/utils'
 import { useShopContextStore } from '@/stores/shopContextStore'
 
@@ -41,14 +42,7 @@ export default function StorefrontPage() {
     data: shopData,
     isLoading: shopLoading,
     error: shopError,
-  } = useQuery({
-    queryKey: ['shop', token],
-    queryFn: async () => {
-      const response = await shopAPI.resolveLinkByToken(token)
-      return response.data.data.shop as Shop
-    },
-    enabled: !!token,
-  })
+  } = useShop(token)
 
   // Remember this storefront so "Continue Shopping" can return here later,
   // even after the cart is cleared by a purchase.

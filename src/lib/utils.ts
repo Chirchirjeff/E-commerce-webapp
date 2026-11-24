@@ -41,3 +41,8 @@ export function getInitials(name?: string | null, fallback = '?'): string {
   if (parts.length === 0) return fallback.charAt(0).toUpperCase()
   return parts.slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 }
+
+/** The price the buyer actually pays: the sale price when it's lower than the list price. */
+export function effectivePrice(product: { price: number; salePrice?: number | null }): number {
+  return product.salePrice != null && product.salePrice < product.price ? product.salePrice : product.price
+}

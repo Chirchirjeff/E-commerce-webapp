@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useCartStore } from '@/stores/cartStore'
+import { getForeignItems, useCartStore } from '@/stores/cartStore'
+import { Product } from '@/types'
 import { useCheckoutStore } from '@/stores/checkoutStore'
 import { useAuthStore } from '@/stores/authStore'
 import { mpesaAPI } from '@/lib/api'
@@ -49,6 +50,7 @@ export default function PaymentPage() {
   const setCheckoutRequestId = useCheckoutStore((state) => state.setCheckoutRequestId)
   const setOrderNumber      = useCheckoutStore((state) => state.setOrderNumber)
   const setShopToken        = useCheckoutStore((state) => state.setShopToken)
+  const setPendingPayment   = useCheckoutStore((state) => state.setPendingPayment)
   const cartShopToken       = useCartStore((state) => state.shopToken)
 
   const user    = useAuthStore((state) => state.user)
@@ -80,7 +82,14 @@ export default function PaymentPage() {
     }
   }, [hydrated, delivery, deliveryBuyerId, buyerId, router])
 
-  if (!hydrated || !delivery || items.length === 0) return <CheckoutReviewSkeleton />
+  // Guard: one payment pays one shop. A cart saved before the single-shop rule
+  // may mix shops — send the buyer back to the cart to resolve it.
+  const hasForeignItems = getForeignItems({ items, shopId }).length > 0
+  useEffect(() => {
+    if (hydrated && hasForeignItems) router.replace('/cart')
+  }, [hydrated, hasForeignItems, router])
+
+  if (!hydrated || !delivery || items.length === 0 || hasForeignItems) return <CheckoutReviewSkeleton />
 
   const total = getTotal()
 
@@ -118,6 +127,18 @@ export default function PaymentPage() {
       })
 
       if (cartShopToken) setShopToken(cartShopToken)
+      // This flow always pays for the cart — /checkout/processing clears it on success.
+      setPendingPayment({
+        source: 'cart',
+        amount: total,
+        shopId: shopId!,
+        shopToken: cartShopToken ?? null,
+        items: items.map((item) => ({
+          product: item.product ?? ({ id: item.productId, name: 'Product', price: item.price, stockQuantity: item.quantity, shopId: shopId! } as Product),
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      })
       setMpesaPhone(cleanPhone)
       setCheckoutRequestId(response.data.checkoutRequestId)
       setOrderNumber(response.data.orderNumber)

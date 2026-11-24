@@ -1,15 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useQuery } from '@tanstack/react-query'
-import { useCartStore } from '@/stores/cartStore'
+import { getForeignItems, useCartStore } from '@/stores/cartStore'
+import { Product } from '@/types'
 import { productsAPI } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { useShopHref } from '@/hooks/useShopHref'
 import { QuickPayModal } from '@/components/checkout/QuickPayModal'
+import { useShop, isVerifiedShop } from '@/hooks/useShop'
 
 export default function CartPage() {
   const items          = useCartStore((state) => state.items)
@@ -17,8 +19,24 @@ export default function CartPage() {
   const updateQuantity = useCartStore((state) => state.updateQuantity)
   const getTotal       = useCartStore((state) => state.getTotal)
   const shopToken      = useCartStore((state) => state.shopToken)
+  const shopId         = useCartStore((state) => state.shopId)
+  const cartShopName   = useCartStore((state) => state.shopName)
 
   const [quickPayOpen, setQuickPayOpen] = useState(false)
+
+  const { data: shop } = useShop(shopToken)
+
+  // Carts saved before the single-shop rule may hold items from another shop.
+  // One M-Pesa payment pays one shop, so block checkout until they're removed.
+  const foreignItems = getForeignItems({ items, shopId })
+
+  // Resume checkout after "Sign in for faster checkout" (?checkout=1)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('checkout') !== '1') return
+    window.history.replaceState(null, '', '/cart')
+    if (useCartStore.getState().items.length > 0) setQuickPayOpen(true)
+  }, [])
 
   // Refresh product details in case cart data is stale
   const { data: productsMap } = useQuery({
@@ -29,7 +47,7 @@ export default function CartPage() {
       return products.reduce((acc, res) => {
         acc[res.data.id] = res.data
         return acc
-      }, {} as Record<string, any>)
+      }, {} as Record<string, Product>)
     },
     enabled: items.length > 0,
   })
@@ -65,6 +83,11 @@ export default function CartPage() {
           <div className="bg-white rounded-lg border border-gray-200">
             {items.map((item, index) => {
               const product = productsMap?.[item.productId]
+              // Prefer freshly fetched stock over the snapshot saved in the cart
+              const stock = product?.stockQuantity ?? item.product?.stockQuantity
+              const atMax = typeof stock === 'number' && item.quantity >= stock
+              const isForeign = foreignItems.includes(item)
+              const thumbnail = item.product?.thumbnailUrl || product?.thumbnailUrl
               return (
                 <div
                   key={item.productId}
@@ -72,9 +95,9 @@ export default function CartPage() {
                 >
                   {/* Thumbnail */}
                   <div className="relative w-20 h-20 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
-                    {(item.product?.thumbnailUrl || product?.thumbnailUrl) ? (
+                    {thumbnail ? (
                       <Image
-                        src={item.product?.thumbnailUrl ?? product!.thumbnailUrl}
+                        src={thumbnail}
                         alt={item.product?.name || 'Product'}
                         fill className="object-cover"
                       />
@@ -105,22 +128,29 @@ export default function CartPage() {
                     {/* Quantity */}
                     <div className="flex items-center gap-2 mt-4">
                       <button
-                        onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
+                        onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1), stock)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
                         aria-label="Decrease quantity"
                       >−</button>
                       <input
-                        type="number" min="1" value={item.quantity}
-                        onChange={(e) => updateQuantity(item.productId, Math.max(1, parseInt(e.target.value) || 1))}
+                        type="number" min="1" max={stock} value={item.quantity}
+                        onChange={(e) => updateQuantity(item.productId, Math.max(1, parseInt(e.target.value) || 1), stock)}
                         className="w-12 text-center border border-gray-300 rounded text-sm"
                         aria-label="Quantity"
                       />
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1, stock)}
+                        disabled={atMax}
+                        className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-40 disabled:hover:bg-transparent"
                         aria-label="Increase quantity"
                       >+</button>
                     </div>
+                    {typeof stock === 'number' && stock > 0 && stock <= 5 && (
+                      <p className="mt-1 text-xs text-orange-600">Only {stock} left</p>
+                    )}
+                    {isForeign && (
+                      <p className="mt-1 text-xs font-medium text-red-600">From a different shop — remove to check out</p>
+                    )}
                   </div>
 
                   {/* Price + Remove */}
@@ -161,14 +191,48 @@ export default function CartPage() {
                 <span>{formatPrice(total)}</span>
               </div>
             </div>
-            <Button className="w-full" onClick={() => setQuickPayOpen(true)}>
+            {foreignItems.length > 0 && (
+              <div role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <p>Your cart has items from more than one shop. Each payment goes to one shop.</p>
+                <button
+                  type="button"
+                  onClick={() => foreignItems.forEach((item) => removeItem(item.productId))}
+                  className="mt-2 font-medium underline"
+                >
+                  Remove {foreignItems.length === 1 ? 'that item' : `those ${foreignItems.length} items`}
+                </button>
+              </div>
+            )}
+            <Button
+              className="w-full"
+              onClick={() => setQuickPayOpen(true)}
+              disabled={foreignItems.length > 0 || !shopId}
+            >
               Proceed to Checkout
             </Button>
           </div>
         </aside>
       </div>
 
-      <QuickPayModal isOpen={quickPayOpen} onClose={() => setQuickPayOpen(false)} />
+      <QuickPayModal
+        isOpen={quickPayOpen}
+        onClose={() => setQuickPayOpen(false)}
+        source="cart"
+        signInReturnPath="/cart?checkout=1"
+        order={{
+          shopId: shopId ?? '',
+          shopName: shop?.name ?? cartShopName,
+          shopToken,
+          shopVerified: isVerifiedShop(shop),
+          items: items
+            .filter((item) => !foreignItems.includes(item))
+            .map((item) => ({
+              product: productsMap?.[item.productId] ?? item.product ?? ({ id: item.productId, name: 'Product', price: item.price, stockQuantity: item.quantity, shopId: shopId ?? '' } as Product),
+              quantity: item.quantity,
+              price: item.price,
+            })),
+        }}
+      />
     </div>
   )
 }

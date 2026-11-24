@@ -12,17 +12,21 @@ import { StarRating, formatReviewCount } from '@/components/ui/StarRating'
 import { ProductShareButton } from './ProductShareButton'
 import { X, ChevronLeft, ChevronRight, Pause, Play, BookOpen, Star } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
-import { useCartStore } from '@/stores/cartStore'
+import { useAddToCart } from '@/hooks/useAddToCart'
+import { useShop, isVerifiedShop } from '@/hooks/useShop'
 import { cn } from '@/lib/utils'
 import { useProductReviews, useCanReview, useSubmitReview } from '@/hooks/useReviews'
-import { QuickPayModal } from '@/components/checkout/QuickPayModal'
+import { QuickPayModal, buildBuyNowOrder } from '@/components/checkout/QuickPayModal'
 
 interface ProductModalProps {
   product: ProductDetail | Product
   isOpen: boolean
   onClose: () => void
+  /** Called after the product has been added to the cart (the modal adds it itself). */
   onAddToCart?: (product: ProductDetail | Product, quantity: number) => void
   showControls?: boolean
+  /** Show Add to Cart / Buy Now. */
+  showPurchaseActions?: boolean
   shopToken?: string
 }
 
@@ -35,6 +39,7 @@ export function ProductModal({
   onClose,
   onAddToCart,
   showControls = true,
+  showPurchaseActions = true,
   shopToken,
 }: ProductModalProps) {
   const [quantity, setQuantity] = React.useState(1)
@@ -42,8 +47,30 @@ export function ProductModal({
   const [isAutoSlidingModal, setIsAutoSlidingModal] = useState(true)
   const [activeTab, setActiveTab] = useState<ActiveTab>('details')
   const [quickPayOpen, setQuickPayOpen] = useState(false)
+  // Quantity frozen when Buy Now is tapped — the sheet has its own stepper
+  const [buyNowQty, setBuyNowQty] = useState(1)
   const { theme } = useTheme()
-  const addToCart = useCartStore((state) => state.addItem)
+
+  // Shop shown in the pay sheet (cached from the storefront page)
+  const { data: fetchedShop } = useShop(isOpen ? shopToken : undefined)
+  const shop = (product as ProductDetail).shop ?? fetchedShop
+  const shopInfo = { name: shop?.name, token: shopToken, verified: isVerifiedShop(shop) }
+
+  const openBuyNow = (qty: number) => {
+    setBuyNowQty(qty)
+    setQuickPayOpen(true)
+  }
+
+  const { addToCart, conflictDialog } = useAddToCart({
+    shopToken,
+    shopName: shop?.name,
+    onAdded: (_result, addedProduct, addedQty) => {
+      onAddToCart?.(addedProduct, addedQty)
+      setQuantity(1)
+      onClose()
+    },
+    onBuyNowInstead: (_p, qty) => openBuyNow(qty),
+  })
 
   const images = (product as ProductDetail).images
   const thumbnail = (product as Product).thumbnailUrl
@@ -108,19 +135,13 @@ export function ProductModal({
   const toggleAutoSlideModal = () => setIsAutoSlidingModal((v) => !v)
 
   const handleAddToCart = () => {
-    if (onAddToCart) {
-      onAddToCart(product, quantity)
-      setQuantity(1)
-      onClose()
-    }
+    // Single-shop cart: a product from another shop opens the conflict dialog
+    // instead of being added (see useAddToCart).
+    addToCart(product as Product, quantity)
   }
 
-  const handleBuyNow = () => {
-    addToCart(product as Product, quantity, shopToken)
-    setQuantity(1)
-    // Keep the product modal open behind the pay modal — close both when done
-    setQuickPayOpen(true)
-  }
+  // Buy Now = express purchase of just this product. It never touches the cart.
+  const handleBuyNow = () => openBuyNow(quantity)
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -346,7 +367,7 @@ export function ProductModal({
                     )}
 
                     {/* Cart / Buy now */}
-                    {p.stockQuantity > 0 && onAddToCart && (
+                    {p.stockQuantity > 0 && showPurchaseActions && (
                       <div className="space-y-3 sticky bottom-0 pb-2 pt-2 -mx-6 px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 md:static md:border-t-0 md:bg-transparent md:dark:bg-transparent md:mx-0 md:px-0 md:pb-0 md:pt-0">
                         <div className="grid grid-cols-2 gap-3">
                           <Button onClick={handleAddToCart} className="w-full py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors">
@@ -430,14 +451,18 @@ export function ProductModal({
         </div>
       </div>
 
-      {/* QuickPayModal sits on top of the product modal when Buy Now is clicked */}
+      {/* Buy Now sheet sits on top of the product modal. Closing it returns to
+          the product; a successful payment navigates to /checkout/processing. */}
       <QuickPayModal
         isOpen={quickPayOpen}
-        onClose={() => {
-          setQuickPayOpen(false)
-          onClose()
-        }}
+        onClose={() => setQuickPayOpen(false)}
+        order={buildBuyNowOrder(product as Product, buyNowQty, shopInfo)}
+        source="buyNow"
+        signInReturnPath={
+          shopToken ? `/${shopToken}/products/${product.id}?buy=1&qty=${buyNowQty}` : undefined
+        }
       />
+      {conflictDialog}
     </>
   )
 }

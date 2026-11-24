@@ -10,21 +10,12 @@ import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
 import { CheckoutProcessingSkeleton } from '@/components/skeletons/PageSkeletons'
+import { QuickPayModal } from '@/components/checkout/QuickPayModal'
 
 // Safaricom STK push prompts expire in ~3 minutes; allow the full window
 const POLL_INTERVAL_MS  = 3_000
 const POLL_TIMEOUT_MS   = 3 * 60_000   // 3 minutes
 const FIRST_POLL_DELAY  = 1_000        // check quickly after landing
-
-function Spinner({ size = 48, className = '' }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      className={`animate-spin ${className}`} aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-    </svg>
-  )
-}
 
 /** Animated ring that drains over `durationMs` */
 function CountdownRing({ durationMs, elapsed }: { durationMs: number; elapsed: number }) {
@@ -73,6 +64,16 @@ export default function ProcessingPage() {
   const setOrderShopToken   = useCheckoutStore((state) => state.setOrderShopToken)
   const setPendingOrderId   = useCheckoutStore((state) => state.setPendingOrderId)
   const setPendingOrderTrackingToken = useCheckoutStore((state) => state.setPendingOrderTrackingToken)
+  // What this STK push was for. Payments started before this field existed
+  // were always cart checkouts, so a missing snapshot is treated as 'cart'.
+  const pendingPayment      = useCheckoutStore((state) => state.pendingPayment)
+  const source              = pendingPayment?.source ?? 'cart'
+  const paymentShopToken    = pendingPayment ? pendingPayment.shopToken : cartShopToken ?? null
+
+  const [retryOpen, setRetryOpen] = useState(false)
+  // Set once payment succeeds so the "no request id" guard below doesn't
+  // bounce the buyer to /checkout/payment while we navigate away.
+  const finishedRef = useRef(false)
 
   const [view, setView]     = useState<ViewState>('waiting')
   const [status, setStatus] = useState<MpesaStatusResponse | null>(null)
@@ -84,8 +85,16 @@ export default function ProcessingPage() {
 
   // Guard: must have a request ID
   useEffect(() => {
-    if (!checkoutRequestId) router.replace('/checkout/payment')
+    if (!checkoutRequestId && !finishedRef.current) router.replace('/checkout/payment')
   }, [checkoutRequestId, router])
+
+  // A retry from this page sends a new STK push — start waiting again
+  useEffect(() => {
+    if (!checkoutRequestId) return
+    setView('waiting')
+    setStatus(null)
+    setElapsed(0)
+  }, [checkoutRequestId])
 
   // 1-second elapsed ticker so the countdown ring animates smoothly
   useEffect(() => {
@@ -122,11 +131,14 @@ export default function ProcessingPage() {
         if (data.status === 'SUCCESS') {
           // Save the shop token before clearing stores — it survives clearCheckout()
           // and lets the order confirmation page send the buyer back to the right shop.
-          if (cartShopToken) {
-            setShopToken(cartShopToken)
-            if (data.orderId) setOrderShopToken(data.orderId, cartShopToken)
+          if (paymentShopToken) {
+            setShopToken(paymentShopToken)
+            if (data.orderId) setOrderShopToken(data.orderId, paymentShopToken)
           }
-          clearCart()
+          finishedRef.current = true
+          // Only a cart checkout empties the cart. Buy Now paid for a single
+          // item outside the cart, so whatever the buyer had saved stays put.
+          if (source === 'cart') clearCart()
           clearCheckout()
           if (data.orderId) {
             // Store tracking token for guest order confirmation
@@ -144,7 +156,7 @@ export default function ProcessingPage() {
       // Network hiccup — keep retrying until timeout
       pollingRef.current = setTimeout(pollStatus, POLL_INTERVAL_MS)
     }
-  }, [checkoutRequestId, cartShopToken, setShopToken, setOrderShopToken, clearCart, clearCheckout, setPendingOrderId, setPendingOrderTrackingToken, reservedOrderNumber, router])
+  }, [checkoutRequestId, paymentShopToken, source, setShopToken, setOrderShopToken, clearCart, clearCheckout, setPendingOrderId, setPendingOrderTrackingToken, reservedOrderNumber, router])
 
   useEffect(() => {
     if (!checkoutRequestId) return
@@ -156,7 +168,7 @@ export default function ProcessingPage() {
 
   if (!checkoutRequestId) return <CheckoutProcessingSkeleton />
 
-  const total = getTotal()
+  const total = pendingPayment?.amount ?? getTotal()
 
   // ── Waiting ────────────────────────────────────────────────────────────────
   if (view === 'waiting') {
@@ -214,14 +226,45 @@ export default function ProcessingPage() {
         <p className="text-gray-600 mb-8">
           {status?.resultDescription || 'Something went wrong. Please try again.'}
         </p>
-        <div className="flex gap-3">
-          <Link href="/checkout/delivery" className="flex-1">
-            <Button variant="secondary" className="w-full">Edit Details</Button>
-          </Link>
-          <Link href="/checkout/payment" className="flex-1">
-            <Button className="w-full">Try Again</Button>
-          </Link>
-        </div>
+        {source === 'buyNow' && pendingPayment ? (
+          // Buy Now never used the cart, so retry the same single-item order
+          // here instead of sending the buyer into the cart checkout.
+          <>
+            <div className="flex gap-3">
+              <Link
+                href={
+                  pendingPayment.shopToken && pendingPayment.items[0]
+                    ? `/${pendingPayment.shopToken}/products/${pendingPayment.items[0].product.id}`
+                    : '/'
+                }
+                className="flex-1"
+              >
+                <Button variant="secondary" className="w-full">Back to Product</Button>
+              </Link>
+              <Button className="flex-1" onClick={() => setRetryOpen(true)}>Try Again</Button>
+            </div>
+            <QuickPayModal
+              isOpen={retryOpen}
+              onClose={() => setRetryOpen(false)}
+              source="buyNow"
+              order={{
+                shopId: pendingPayment.shopId,
+                shopName: pendingPayment.shopName,
+                shopToken: pendingPayment.shopToken ?? undefined,
+                items: pendingPayment.items,
+              }}
+            />
+          </>
+        ) : (
+          <div className="flex gap-3">
+            <Link href="/checkout/delivery" className="flex-1">
+              <Button variant="secondary" className="w-full">Edit Details</Button>
+            </Link>
+            <Link href="/checkout/payment" className="flex-1">
+              <Button className="w-full">Try Again</Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )

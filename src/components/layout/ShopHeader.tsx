@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { BadgeCheck, CalendarDays, Layers, Package } from 'lucide-react'
 import { Shop } from '@/types'
+import { ShopCover } from './ShopCover'
 
 interface ShopHeaderProps {
   shop: Shop
@@ -31,13 +32,12 @@ export function ShopHeader({ shop, productCount = 0, categoryCount = 0 }: ShopHe
       {/* ── Cover ─────────────────────────────────────────────────────────── */}
       <div className="relative h-56 w-full overflow-hidden sm:h-72 md:h-80 lg:h-[22rem]">
         {shop.coverPhoto ? (
-          <Image
+          <ShopCover
             src={shop.coverPhoto}
-            alt={shop.name}
-            fill
-            sizes="100vw"
-            className="object-cover object-center"
+            alt={`${shop.name} cover photo`}
             priority
+            // Keep the whole cover above the identity card that overlaps the banner's bottom.
+            foregroundClassName="inset-x-0 top-0 bottom-20 sm:bottom-24"
           />
         ) : (
           // Decorative brand backdrop when the seller hasn't uploaded a cover

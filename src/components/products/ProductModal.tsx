@@ -7,6 +7,7 @@ import { formatPrice, formatDate } from '@/lib/utils'
 import { normalizeProductImages } from '@/lib/image-utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar'
 import { StarRating, formatReviewCount } from '@/components/ui/StarRating'
 import { ProductShareButton } from './ProductShareButton'
 import { X, ChevronLeft, ChevronRight, Pause, Play, BookOpen, Star } from 'lucide-react'
@@ -663,14 +664,16 @@ function ReviewCard({ review, isDark }: { review: Review; isDark: boolean }) {
   return (
     <div className={cn('rounded-xl p-4 border', isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200')}>
       <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2">
-          {/* Avatar initials */}
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {review.user?.name?.[0]?.toUpperCase() ?? 'A'}
-          </div>
-          <div>
-            <p className={cn('text-sm font-semibold', isDark ? 'text-slate-200' : 'text-gray-900')}>
-              {review.user?.name ?? 'Anonymous'}
+        <div className="flex items-center gap-2 min-w-0">
+          <Avatar src={review.user?.avatarUrl} name={review.user?.name} fallback="A" size="sm" colorClassName="bg-green-500" />
+          <div className="min-w-0">
+            <p className={cn('text-sm font-semibold truncate', isDark ? 'text-slate-200' : 'text-gray-900')}>
+              {review.user?.name || 'Anonymous'}
+              {review.user?.username && (
+                <span className={cn('ml-1.5 font-normal', isDark ? 'text-slate-500' : 'text-gray-400')}>
+                  @{review.user.username}
+                </span>
+              )}
             </p>
             <StarRating rating={review.rating} size="sm" />
           </div>

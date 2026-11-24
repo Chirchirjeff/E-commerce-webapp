@@ -8,6 +8,7 @@ import { useCheckoutStore, DeliveryDetails } from '@/stores/checkoutStore'
 import { formatPrice } from '@/lib/utils'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
 import Button from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar'
 import { authAPI } from '@/lib/api'
 import { BuyerAddress, BuyerProfile, useAuthStore } from '@/stores/authStore'
 import { useSwitchAccount } from '@/hooks/useSwitchAccount'
@@ -203,10 +204,13 @@ export default function DeliveryPage() {
             {/* Signed-in buyer banner */}
             {user && (
               <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
-                <p className="text-gray-700 min-w-0 truncate">
-                  Checking out as <span className="font-medium text-gray-900">{user.name || user.email}</span>
-                  <span className="text-gray-500"> ({user.email})</span>
-                </p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar src={user.avatarUrl} name={user.name} fallback={user.email} size="xs" />
+                  <p className="text-gray-700 min-w-0 truncate">
+                    Checking out as <span className="font-medium text-gray-900">{user.name || user.email}</span>
+                    <span className="text-gray-500"> ({user.email})</span>
+                  </p>
+                </div>
                 <button type="button" onClick={() => switchAccount('/checkout/delivery')} className="shrink-0 font-medium text-primary-600 hover:text-primary-700">
                   Not you? Switch account
                 </button>

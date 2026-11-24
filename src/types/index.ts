@@ -80,7 +80,15 @@ export interface Review {
   rating: number
   comment?: string
   createdAt: string
-  user?: { id: string; name?: string }
+  user?: PublicBuyer
+}
+
+/** How a buyer appears to others (reviews, orders). */
+export interface PublicBuyer {
+  id: string
+  name?: string
+  username?: string | null
+  avatarUrl?: string | null
 }
 
 /** One block in a product's rich description */
@@ -137,6 +145,8 @@ export interface Order {
   createdAt: string
   updatedAt: string
   shop?: { id: string; name: string }
+  /** The signed-in buyer who placed the order, when there is one. */
+  buyer?: (PublicBuyer & { email?: string; phone?: string | null }) | null
   /** Link token of the shop this order came from — storefront lives at /:shopToken */
   shopToken?: string | null
   mpesaReceiptNumber?: string | null

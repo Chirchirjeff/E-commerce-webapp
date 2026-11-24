@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
 import { useSwitchAccount } from '@/hooks/useSwitchAccount'
 import { useTheme } from '@/context/ThemeContext'
+import { Avatar } from '@/components/ui/Avatar'
 
 export function Header() {
   const buyer = useAuthStore((state) => state.user)
@@ -67,10 +68,8 @@ export function Header() {
 
             {buyer ? (
               <>
-                <Link href="/account" className="flex items-center gap-2 px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title="Your account and delivery addresses">
-                  <span className="w-7 h-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold" aria-hidden="true">
-                    {(buyer.name || buyer.email).charAt(0).toUpperCase()}
-                  </span>
+                <Link href="/account" className="flex items-center gap-2 px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title={buyer.username ? `@${buyer.username} · Your account` : 'Your account and delivery addresses'}>
+                  <Avatar src={buyer.avatarUrl} name={buyer.name} fallback={buyer.email} size="xs" />
                   <span className="hidden sm:inline max-w-[8rem] truncate">{buyer.name?.split(' ')[0] || 'Account'}</span>
                 </Link>
                 <button onClick={() => switchAccount()} className="hidden md:inline px-2 py-2 text-sm text-gray-600 hover:text-primary-600" title="Sign out and let someone else sign in">

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { BuyerAddress } from '@/stores/authStore'
+import type { BuyerAddress, BuyerProfile } from '@/stores/authStore'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 
@@ -247,6 +247,35 @@ export const ordersAPI = {
   ) => apiClient.patch(`/orders/${orderId}/delivery`, data),
 }
 
+/**
+ * Turns an API error into a message that can be shown to the buyer. Nest
+ * validation errors can arrive as an array of messages; the first is used.
+ */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  const raw = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message
+  const message = Array.isArray(raw) ? raw[0] : raw
+  return typeof message === 'string' && message.trim() ? message : fallback
+}
+
+export interface UsernameCheck {
+  username: string
+  available: boolean
+  /** Why the username can't be used, or null when it is available. */
+  reason: string | null
+  /** Alternatives, only returned when the username is already taken. */
+  suggestions: string[]
+}
+
+export interface PasswordResetRequest {
+  message: string
+  expiresInSeconds: number
+}
+
+export interface EmailChangeRequest {
+  email: string
+  expiresInSeconds: number
+}
+
 export const authAPI = {
   registerBuyer: (data: { name: string; email: string; password: string; phone?: string }) =>
     apiClient.post('/auth/buyer/register', data),
@@ -254,11 +283,63 @@ export const authAPI = {
     apiClient.post('/auth/buyer/login', data),
   verifyBuyerCode: (data: { email: string; code: string; purpose: 'LOGIN' | 'VERIFY_EMAIL' }) =>
     apiClient.post<{ access_token: string }>('/auth/buyer/verify', data),
-  requestBuyerPasswordReset: (email: string) =>
-    apiClient.post<{ message: string }>('/auth/buyer/password-reset/request', { email }),
-  confirmBuyerPasswordReset: (data: { token: string; password: string }) =>
-    apiClient.post<{ message: string }>('/auth/buyer/password-reset/confirm', data),
-  getMe: (token?: string) => apiClient.get('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
+  /**
+   * Forgot password, step 1: emails a 6-digit reset code. The response is the
+   * same whether or not the email has an account, and the server silently
+   * ignores re-sends within 60 seconds.
+   */
+  requestPasswordReset: (email: string) =>
+    apiClient.post<PasswordResetRequest>('/auth/password-reset/request', { email }),
+  /**
+   * Step 2: checks the code without using it up. Rejects with 400 when it is
+   * wrong or expired; wrong attempts here count towards the 5-attempt limit.
+   */
+  verifyPasswordResetCode: (data: { email: string; code: string }) =>
+    apiClient.post<{ valid: true }>('/auth/password-reset/verify', data),
+  /**
+   * Step 3: sets the new password and returns a normal buyer token. Accepts
+   * either { email, code, password } or a legacy emailed link's { token, password }.
+   */
+  confirmPasswordReset: (data: { email: string; code: string; password: string } | { token: string; password: string }) =>
+    apiClient.post<{ message: string; access_token: string }>('/auth/password-reset/confirm', data),
+  getMe: (token?: string) => apiClient.get<{ user: BuyerProfile }>('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
+
+  /** PATCH /auth/me — only the fields that are sent are changed. */
+  updateProfile: (data: { name?: string; phone?: string | null; username?: string }) =>
+    apiClient.patch<{ user: BuyerProfile }>('/auth/me', data),
+
+  /** Live username availability, with suggestions when it's taken. */
+  checkUsername: (username: string, signal?: AbortSignal) =>
+    apiClient.get<UsernameCheck>('/auth/me/username-check', { params: { username }, signal }),
+
+  /**
+   * Upload a new profile photo (field "file"). The multipart Content-Type
+   * overrides the client's JSON default so axios sends the FormData as-is and
+   * the browser fills in the boundary.
+   */
+  uploadAvatar: (file: File, onProgress?: (percent: number) => void) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient.post<{ user: BuyerProfile }>('/auth/me/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress
+        ? (event) => { if (event.total) onProgress(Math.round((event.loaded / event.total) * 100)) }
+        : undefined,
+    })
+  },
+  removeAvatar: () =>
+    apiClient.delete<{ user: BuyerProfile }>('/auth/me/avatar'),
+
+  /** Step 1 of an email change: a 6-digit code is emailed to the new address. */
+  requestEmailChange: (data: { newEmail: string; currentPassword: string }) =>
+    apiClient.post<EmailChangeRequest>('/auth/me/email/request', data),
+  /** Step 2: returns a new token (the JWT carries the email) and the updated account. */
+  confirmEmailChange: (code: string) =>
+    apiClient.post<{ access_token: string; user: BuyerProfile }>('/auth/me/email/confirm', { code }),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    apiClient.post<{ message: string }>('/auth/me/password', data),
+
   saveAddress: (data: Partial<BuyerAddress> & { syncProfile?: boolean }) =>
     apiClient.post<{ address: BuyerAddress }>('/auth/me/addresses', data),
   setDefaultAddress: (id: string) =>

@@ -3,9 +3,9 @@
 import { FormEvent, Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { CheckoutProgress } from '@/components/checkout/CheckoutProgress'
+import { PasswordInput } from '@/components/account/PasswordInput'
 import { authAPI } from '@/lib/api'
 import { BuyerProfile, useAuthStore } from '@/stores/authStore'
 import { AuthCardSkeleton } from '@/components/skeletons/PageSkeletons'
@@ -21,7 +21,6 @@ function CheckoutAccountPageContent() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [code, setCode] = useState('')
   const [purpose, setPurpose] = useState<'LOGIN' | 'VERIFY_EMAIL'>('LOGIN')
   const [error, setError] = useState('')
@@ -33,6 +32,8 @@ function CheckoutAccountPageContent() {
     : '/checkout/delivery'
 
   useEffect(() => { if (token) router.replace(nextPath) }, [token, nextPath, router])
+
+  const resetHref = `/reset-password?email=${encodeURIComponent(email.trim())}&next=${encodeURIComponent(nextPath)}`
 
   const message = (err: any) => err?.response?.data?.message || 'Something went wrong. Please try again.'
   const getProfile = async (accessToken: string) => {
@@ -109,7 +110,7 @@ function CheckoutAccountPageContent() {
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">{mode === 'verify' ? 'Check your email' : nextPath === '/checkout/delivery' ? 'Continue to checkout' : nextPath.startsWith('/track') || nextPath.startsWith('/order') ? 'Sign in to track your order' : 'Sign in to your account'}</h1>
         <p className="text-sm text-gray-600 mt-2 mb-6">{mode === 'verify' ? `We sent a six-digit code to ${email}.` : 'Sign in with your verified buyer account.'}</p>
-        {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"><p>{error}</p>{mode === 'register' && error.toLowerCase().includes('already exists') && <Link href={`/reset-password?email=${encodeURIComponent(email)}`} className="mt-2 inline-block font-medium underline">Reset this account&apos;s password</Link>}</div>}
+        {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"><p>{error}</p>{mode === 'register' && error.toLowerCase().includes('already exists') && <Link href={resetHref} className="mt-2 inline-block font-medium underline">Reset this account&apos;s password</Link>}</div>}
         {mode === 'verify' ? (
           <form onSubmit={submitCode} className="space-y-4">
             <input ref={codeInputRef} autoFocus inputMode="numeric" autoComplete="one-time-code" aria-label="Verification code" maxLength={CODE_LENGTH} value={code} onChange={(e) => handleCodeChange(e.target.value)} disabled={loading} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.45em] disabled:bg-gray-50" placeholder="000000" required />
@@ -121,21 +122,14 @@ function CheckoutAccountPageContent() {
           <form onSubmit={submitCredentials} className="space-y-4">
             {mode === 'register' && <><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="Full name" required /><input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="M-Pesa phone number" required /></>}
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="Email address" required />
-            <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" placeholder="Password (at least 8 characters)" required />
-              <button
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-gray-700"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                title={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
-              </button>
-            </div>
+            <PasswordInput
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+              aria-label="Password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
+              className="py-3" placeholder="Password (at least 8 characters)" required
+            />
             <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</Button>
             <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }} className="w-full text-sm text-primary-600">{mode === 'login' ? 'New to Quza? Create an account' : 'Already have an account? Sign in'}</button>
-            {mode === 'login' && <Link href={`/reset-password?email=${encodeURIComponent(email)}`} className="block w-full text-center text-sm text-primary-600">Forgot password?</Link>}
+            {mode === 'login' && <Link href={resetHref} className="block w-full text-center text-sm text-primary-600">Forgot password?</Link>}
           </form>
         )}
       </div>

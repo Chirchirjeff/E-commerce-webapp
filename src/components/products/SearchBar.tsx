@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils'
 interface SearchBarProps {
   onSearch: (query: string) => void
   isLoading?: boolean
-  placeholder?: string
+  /** Accessible name for the search input (not shown visually). */
+  label?: string
   /** Active query from the parent — keeps the input in sync when a filter chip is cleared. */
   value?: string
 }
@@ -15,7 +16,7 @@ interface SearchBarProps {
 export function SearchBar({
   onSearch,
   isLoading,
-  placeholder = 'Search products...',
+  label = 'Search products',
   value,
 }: SearchBarProps) {
   const [query, setQuery] = useState(value ?? '')
@@ -44,8 +45,7 @@ export function SearchBar({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        aria-label={label}
         className={cn(
           'h-12 w-full rounded-full border pl-12 pr-32 text-sm shadow-sm outline-none transition',
           'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400',

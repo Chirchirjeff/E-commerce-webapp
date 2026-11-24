@@ -383,7 +383,7 @@ function ItemReviewWidget({ productId, productName }: { productId: string; produ
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Share what you liked or didn't like (optional)"
+          aria-label="Review comment (optional)"
           rows={2}
           className="w-full text-sm rounded-lg border border-amber-300 bg-white px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
         />

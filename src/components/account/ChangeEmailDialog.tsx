@@ -153,7 +153,6 @@ export function ChangeEmailDialog({ open, currentEmail, onClose, onChanged }: Ch
               id="change-email-new" type="email" autoComplete="email" value={newEmail}
               onChange={(e) => { setNewEmail(e.target.value); setError('') }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-              placeholder="you@example.com"
             />
           </div>
           <div>
@@ -176,7 +175,6 @@ export function ChangeEmailDialog({ open, currentEmail, onClose, onChanged }: Ch
             maxLength={CODE_LENGTH} value={code} onChange={(e) => onCodeChange(e.target.value)}
             disabled={loading || codeBurned || expired}
             className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.45em] disabled:bg-gray-50"
-            placeholder="000000"
           />
           <p className="text-center text-xs text-gray-500">
             {expired

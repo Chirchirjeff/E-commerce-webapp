@@ -346,7 +346,7 @@ export default function DeliveryPage() {
                   <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                   <input id="customerName" name="customerName" type="text"
                     value={contact.customerName} onChange={handleContactChange}
-                    className={inputClass('customerName')} placeholder="Jane Doe" />
+                    className={inputClass('customerName')} />
                   {errors.customerName && <p className="mt-1 text-sm text-red-600">{errors.customerName}</p>}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -354,7 +354,7 @@ export default function DeliveryPage() {
                     <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                     <input id="customerPhone" name="customerPhone" type="tel"
                       value={contact.customerPhone} onChange={handleContactChange}
-                      className={inputClass('customerPhone')} placeholder="0712 345 678" />
+                      className={inputClass('customerPhone')} />
                     {errors.customerPhone && <p className="mt-1 text-sm text-red-600">{errors.customerPhone}</p>}
                   </div>
                   <div>
@@ -363,7 +363,7 @@ export default function DeliveryPage() {
                     </label>
                     <input id="customerEmail" name="customerEmail" type="email"
                       value={contact.customerEmail} onChange={handleContactChange}
-                      className={inputClass('customerEmail')} placeholder="jane@example.com" />
+                      className={inputClass('customerEmail')} />
                     {errors.customerEmail && <p className="mt-1 text-sm text-red-600">{errors.customerEmail}</p>}
                     {!isAuthenticated && (
                       <p className="mt-1 text-xs text-gray-400">We'll send a payment confirmation if provided.</p>

@@ -151,7 +151,7 @@ export function ProfileSection({
             <input
               ref={nameRef} id="profile-name" value={name} autoComplete="name" maxLength={120}
               onChange={(e) => { setName(e.target.value); clearError('name') }}
-              aria-invalid={!!errors.name} className={inputClass(!!errors.name)} placeholder="Jane Doe"
+              aria-invalid={!!errors.name} className={inputClass(!!errors.name)}
             />
             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
           </div>
@@ -174,7 +174,7 @@ export function ProfileSection({
             <input
               ref={phoneRef} id="profile-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone}
               onChange={(e) => { setPhone(e.target.value); clearError('phone') }}
-              aria-invalid={!!errors.phone} className={inputClass(!!errors.phone)} placeholder="0712 345 678"
+              aria-invalid={!!errors.phone} className={inputClass(!!errors.phone)}
             />
             {errors.phone
               ? <p className="mt-1 text-sm text-red-600">{errors.phone}</p>

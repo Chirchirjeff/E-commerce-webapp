@@ -98,7 +98,6 @@ export const UsernameField = forwardRef<HTMLInputElement, UsernameFieldProps>(fu
           className={`w-full pl-8 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent ${
             message ? 'border-red-500' : status === 'available' ? 'border-green-500' : 'border-gray-300'
           }`}
-          placeholder="jane.doe"
         />
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3" aria-hidden="true">
           {status === 'checking' && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}

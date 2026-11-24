@@ -172,7 +172,7 @@ export default function StorefrontPage() {
           <SearchBar
             onSearch={handleSearch}
             isLoading={productsLoading && !!searchQuery}
-            placeholder="Search products in this shop..."
+            label="Search products in this shop"
             value={searchQuery}
           />
           <CategoryBar

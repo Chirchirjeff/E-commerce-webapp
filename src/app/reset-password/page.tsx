@@ -238,7 +238,7 @@ function ResetPasswordContent() {
             <input
               ref={emailInputRef} id="reset-email" type="email" autoComplete="email" value={email}
               onChange={(e) => { setEmail(e.target.value); setError('') }}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="Email address" required
+              className="w-full rounded-lg border border-gray-300 px-4 py-3" required
             />
             <Button type="submit" className="w-full" isLoading={loading}>{loading ? 'Sending code…' : 'Send code'}</Button>
           </form>
@@ -249,7 +249,6 @@ function ResetPasswordContent() {
               maxLength={CODE_LENGTH} value={code} onChange={(e) => onCodeChange(e.target.value)}
               disabled={loading || codeBurned || expired}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.45em] disabled:bg-gray-50"
-              placeholder="000000"
             />
             <p className="text-center text-xs text-gray-500">
               {expired
@@ -280,7 +279,7 @@ function ResetPasswordContent() {
               <PasswordInput
                 ref={passwordInputRef} id="reset-password-new" autoComplete="new-password" minLength={MIN_PASSWORD}
                 value={password} onChange={(e) => { setPassword(e.target.value); setError('') }}
-                className="py-3" placeholder="At least 8 characters"
+                className="py-3"
               />
             </div>
             <div>

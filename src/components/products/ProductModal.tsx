@@ -611,7 +611,7 @@ function ReviewsTab({
           <textarea
             value={reviewComment}
             onChange={(e) => onCommentChange(e.target.value)}
-            placeholder="Share your experience with this product (optional)"
+            aria-label="Review comment (optional)"
             rows={3}
             className={cn(
               'w-full rounded-lg border px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500',

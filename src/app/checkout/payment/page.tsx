@@ -185,7 +185,6 @@ export default function PaymentPage() {
                 className={`w-full px-4 py-3 border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                   phoneError ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="0712 345 678"
                 autoComplete="tel"
               />
               {phoneError && <p className="mt-1 text-sm text-red-600">{phoneError}</p>}

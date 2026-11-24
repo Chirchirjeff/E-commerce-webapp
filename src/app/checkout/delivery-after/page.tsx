@@ -166,7 +166,6 @@ export default function DeliveryAfterPage() {
                   value={name}
                   onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: '' })) }}
                   className={inputClass(!!errors.name)}
-                  placeholder="Jane Doe"
                 />
                 {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
               </div>
@@ -177,7 +176,6 @@ export default function DeliveryAfterPage() {
                   value={phone}
                   onChange={(e) => { setPhone(e.target.value); setErrors((p) => ({ ...p, phone: '' })) }}
                   className={inputClass(!!errors.phone)}
-                  placeholder="0712 345 678"
                 />
                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
@@ -191,7 +189,6 @@ export default function DeliveryAfterPage() {
                 value={address}
                 onChange={(e) => { setAddress(e.target.value); setErrors((p) => ({ ...p, address: '' })) }}
                 className={inputClass(!!errors.address)}
-                placeholder="123 Moi Avenue, Apt 4B"
               />
               {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
             </div>
@@ -205,7 +202,6 @@ export default function DeliveryAfterPage() {
                   value={city}
                   onChange={(e) => { setCity(e.target.value); setErrors((p) => ({ ...p, city: '' })) }}
                   className={inputClass(!!errors.city)}
-                  placeholder="Nairobi"
                 />
                 {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
               </div>
@@ -216,7 +212,6 @@ export default function DeliveryAfterPage() {
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   className={inputClass()}
-                  placeholder="Nairobi County"
                 />
               </div>
             </div>
@@ -229,7 +224,6 @@ export default function DeliveryAfterPage() {
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
                 className={inputClass()}
-                placeholder="00100"
               />
             </div>
 

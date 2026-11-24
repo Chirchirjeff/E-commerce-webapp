@@ -71,7 +71,6 @@ function TrackByOrderNumberPageContent() {
             value={orderNumber}
             onChange={(event) => setOrderNumber(event.target.value.toUpperCase())}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-3 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary-500"
-            placeholder="QZ-20261122-00001"
             aria-label="Order number"
             required
           />

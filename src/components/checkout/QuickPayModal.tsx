@@ -535,7 +535,6 @@ export function QuickPayModal({ isOpen, onClose, order, source, signInReturnPath
                     value={name}
                     onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })) }}
                     className={fieldClass(errors.name)}
-                    placeholder="Jane Wanjiru"
                     autoComplete="name"
                     aria-invalid={!!errors.name}
                     aria-describedby={errors.name ? `${fieldId}-name-err` : undefined}
@@ -557,7 +556,6 @@ export function QuickPayModal({ isOpen, onClose, order, source, signInReturnPath
                 value={mpesaPhone}
                 onChange={(e) => { setMpesaPhoneState(e.target.value); setErrors((x) => ({ ...x, mpesa: undefined })) }}
                 className={`${fieldClass(errors.mpesa)} py-3 text-base`}
-                placeholder="0712 345 678"
                 autoComplete="tel"
                 aria-invalid={!!errors.mpesa}
                 aria-describedby={errors.mpesa ? `${fieldId}-mpesa-err` : undefined}
@@ -577,7 +575,6 @@ export function QuickPayModal({ isOpen, onClose, order, source, signInReturnPath
                     value={city}
                     onChange={(e) => { setCity(e.target.value); setErrors((x) => ({ ...x, city: undefined })) }}
                     className={fieldClass(errors.city)}
-                    placeholder="Nairobi"
                     autoComplete="address-level2"
                     aria-invalid={!!errors.city}
                     aria-describedby={errors.city ? `${fieldId}-city-err` : undefined}
@@ -595,7 +592,6 @@ export function QuickPayModal({ isOpen, onClose, order, source, signInReturnPath
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className={fieldClass()}
-                    placeholder="e.g. Moi Avenue, Hazina Towers, 4th floor"
                     autoComplete="street-address"
                     disabled={loading}
                   />
@@ -612,7 +608,6 @@ export function QuickPayModal({ isOpen, onClose, order, source, signInReturnPath
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })) }}
                       className={fieldClass(errors.email)}
-                      placeholder="you@example.com"
                       autoComplete="email"
                       aria-invalid={!!errors.email}
                       aria-describedby={errors.email ? `${fieldId}-email-err` : undefined}

@@ -113,20 +113,27 @@ function CheckoutAccountPageContent() {
         {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"><p>{error}</p>{mode === 'register' && error.toLowerCase().includes('already exists') && <Link href={resetHref} className="mt-2 inline-block font-medium underline">Reset this account&apos;s password</Link>}</div>}
         {mode === 'verify' ? (
           <form onSubmit={submitCode} className="space-y-4">
-            <input ref={codeInputRef} autoFocus inputMode="numeric" autoComplete="one-time-code" aria-label="Verification code" maxLength={CODE_LENGTH} value={code} onChange={(e) => handleCodeChange(e.target.value)} disabled={loading} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.45em] disabled:bg-gray-50" placeholder="000000" required />
+            <input ref={codeInputRef} autoFocus inputMode="numeric" autoComplete="one-time-code" aria-label="Verification code" maxLength={CODE_LENGTH} value={code} onChange={(e) => handleCodeChange(e.target.value)} disabled={loading} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.45em] disabled:bg-gray-50" required />
             <p className="text-center text-xs text-gray-500">We&apos;ll verify automatically once all {CODE_LENGTH} digits are in.</p>
             <Button type="submit" className="w-full" disabled={loading || code.length !== CODE_LENGTH}>{loading ? 'Verifying…' : 'Verify and continue'}</Button>
             <button type="button" onClick={() => { setMode('login'); setCode(''); setError(''); attemptedCode.current = null }} className="w-full text-sm text-primary-600">Use a different account</button>
           </form>
         ) : (
           <form onSubmit={submitCredentials} className="space-y-4">
-            {mode === 'register' && <><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="Full name" required /><input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="M-Pesa phone number" required /></>}
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="Email address" required />
+            {mode === 'register' && <>
+              <div><label htmlFor="account-name" className="mb-1 block text-sm font-medium text-gray-700">Full name</label><input id="account-name" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" required /></div>
+              <div><label htmlFor="account-phone" className="mb-1 block text-sm font-medium text-gray-700">M-Pesa phone number</label><input id="account-phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" required /></div>
+            </>}
+            <div><label htmlFor="account-email" className="mb-1 block text-sm font-medium text-gray-700">Email address</label><input id="account-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3" required /></div>
+            <div>
+            <label htmlFor="account-password" className="mb-1 block text-sm font-medium text-gray-700">Password (at least 8 characters)</label>
             <PasswordInput
+              id="account-password"
               autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-              aria-label="Password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
-              className="py-3" placeholder="Password (at least 8 characters)" required
+              minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
+              className="py-3" required
             />
+            </div>
             <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</Button>
             <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }} className="w-full text-sm text-primary-600">{mode === 'login' ? 'New to Quza? Create an account' : 'Already have an account? Sign in'}</button>
             {mode === 'login' && <Link href={resetHref} className="block w-full text-center text-sm text-primary-600">Forgot password?</Link>}

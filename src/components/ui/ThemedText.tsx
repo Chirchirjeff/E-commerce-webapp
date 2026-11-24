@@ -48,7 +48,7 @@ export function ThemedText({
     muted:
       theme === 'dark' ? 'text-slate-400' : 'text-gray-600',
     primary:
-      theme === 'dark' ? 'text-warm-400' : 'text-warm-600',
+      theme === 'dark' ? 'text-primary-400' : 'text-primary-600',
     success:
       theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600',
     warning:

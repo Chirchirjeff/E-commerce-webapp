@@ -115,7 +115,7 @@ export default function StorefrontPage() {
   // ── Error state ────────────────────────────────────────────────────────────
   if (shopError) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-b from-warm-50/60 to-white px-4 dark:from-slate-950 dark:to-slate-950">
+      <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-b from-primary-50/60 to-white px-4 dark:from-slate-950 dark:to-slate-950">
         <div className="max-w-md text-center">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 ring-8 ring-red-50/50 dark:bg-red-500/10 dark:ring-red-500/5">
             <Store className="h-9 w-9 text-red-500" aria-hidden="true" />
@@ -154,7 +154,7 @@ export default function StorefrontPage() {
     'bg-white text-gray-700 ring-1 ring-inset ring-gray-200 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800'
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50/40 via-gray-50 to-gray-50 transition-colors duration-200 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50/40 via-gray-50 to-gray-50 transition-colors duration-200 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
       {/* ── Hero: cover + identity card ─────────────────────────────────────── */}
       {shopLoading || !shopData ? (
         <ShopHeaderSkeleton />
@@ -215,7 +215,7 @@ export default function StorefrontPage() {
         <div id="shop-products" className="mb-6 flex scroll-mt-48 flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
-              {!isFiltering && <Sparkles className="h-5 w-5 text-gold-500" aria-hidden="true" />}
+              {!isFiltering && <Sparkles className="h-5 w-5 text-accent-500" aria-hidden="true" />}
               {sectionTitle}
             </h2>
             {!productsLoading && (
@@ -229,11 +229,11 @@ export default function StorefrontPage() {
           {isFiltering && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warm-100 py-1 pl-3 pr-1 font-medium text-warm-700 dark:bg-warm-500/15 dark:text-warm-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 py-1 pl-3 pr-1 font-medium text-primary-700 dark:bg-primary-500/15 dark:text-primary-300">
                   “{searchQuery}”
                   <button
                     onClick={() => handleSearch('')}
-                    className="rounded-full p-0.5 hover:bg-warm-200/70 dark:hover:bg-warm-500/20"
+                    className="rounded-full p-0.5 hover:bg-primary-200/70 dark:hover:bg-primary-500/20"
                     aria-label="Clear search"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -241,11 +241,11 @@ export default function StorefrontPage() {
                 </span>
               )}
               {activeCategoryName && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 py-1 pl-3 pr-1 font-medium text-gold-800 dark:bg-gold-500/15 dark:text-gold-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-100 py-1 pl-3 pr-1 font-medium text-accent-800 dark:bg-accent-500/15 dark:text-accent-300">
                   {activeCategoryName}
                   <button
                     onClick={() => handleCategoryChange(undefined)}
-                    className="rounded-full p-0.5 hover:bg-gold-200/70 dark:hover:bg-gold-500/20"
+                    className="rounded-full p-0.5 hover:bg-accent-200/70 dark:hover:bg-accent-500/20"
                     aria-label="Clear category"
                   >
                     <X className="h-3.5 w-3.5" />

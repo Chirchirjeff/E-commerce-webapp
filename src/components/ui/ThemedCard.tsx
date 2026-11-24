@@ -25,16 +25,16 @@ export function ThemedCard({
   const variantClasses = {
     default:
       theme === 'dark'
-        ? 'bg-slate-900 border border-slate-700 hover:border-warm-500/50'
-        : 'bg-white border border-gray-200 hover:border-warm-400',
+        ? 'bg-slate-900 border border-slate-700 hover:border-primary-500/50'
+        : 'bg-white border border-gray-200 hover:border-primary-400',
     elevated:
       theme === 'dark'
-        ? 'bg-slate-800 border border-slate-700 shadow-lg hover:shadow-xl hover:shadow-warm-500/20'
-        : 'bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:shadow-warm-400/20',
+        ? 'bg-slate-800 border border-slate-700 shadow-lg hover:shadow-xl hover:shadow-primary-500/20'
+        : 'bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:shadow-primary-400/20',
     outlined:
       theme === 'dark'
-        ? 'bg-transparent border-2 border-gold-600 hover:bg-gold-600/10'
-        : 'bg-transparent border-2 border-gold-400 hover:bg-gold-50',
+        ? 'bg-transparent border-2 border-accent-600 hover:bg-accent-600/10'
+        : 'bg-transparent border-2 border-accent-400 hover:bg-accent-50',
   }
 
   return (

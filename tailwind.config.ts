@@ -9,43 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Quza brand purple — shared by every Quza app (seller, admin, mobile).
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c3d66',
+          50: '#f7f5ff',
+          100: '#efeaff',
+          200: '#e0d7ff',
+          300: '#c9b8fe',
+          400: '#ab8ffb',
+          500: '#8f66f5',
+          600: '#7847e8',
+          700: '#6535cc',
+          800: '#542da6',
+          900: '#462884',
+          950: '#2a1657',
         },
-        // Light theme: Orange & Golden tones
-        warm: {
-          50: '#fef3f2',
-          100: '#fde8e4',
-          200: '#fbd5cc',
-          300: '#f8b4a0',
-          400: '#f48d74',
-          500: '#ea6f54',
-          600: '#d85c3c',
-          700: '#b84423',
-          800: '#9a3822',
-          900: '#7f2f1e',
-        },
-        // Golden accent
-        gold: {
-          50: '#fffbf0',
-          100: '#fef5e0',
-          200: '#fde7c4',
-          300: '#fcd596',
-          400: '#fac056',
-          500: '#f5a623',
-          600: '#e89a1a',
-          700: '#d98c15',
-          800: '#b47413',
-          900: '#935f11',
+        // Orchid companion — gradient ends and highlight chips next to the purple.
+        accent: {
+          50: '#fdf4ff',
+          100: '#fae8ff',
+          200: '#f5d0fe',
+          300: '#f0abfc',
+          400: '#e879f9',
+          500: '#d946ef',
+          600: '#c026d3',
+          700: '#a21caf',
+          800: '#86198f',
+          900: '#701a75',
         },
       },
       keyframes: {

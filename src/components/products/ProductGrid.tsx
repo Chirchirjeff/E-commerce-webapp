@@ -61,8 +61,8 @@ function ProductGridComponent({ products, shopToken, isLoading }: ProductGridPro
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-white/60 px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-900/40">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-warm-100 to-gold-100 dark:from-warm-500/10 dark:to-gold-500/10">
-          <SearchX className="h-8 w-8 text-warm-500 dark:text-warm-400" aria-hidden="true" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-500/10 dark:to-accent-500/10">
+          <SearchX className="h-8 w-8 text-primary-500 dark:text-primary-400" aria-hidden="true" />
         </div>
         <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">No products found</p>
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
@@ -140,7 +140,7 @@ function ProductGridComponent({ products, shopToken, isLoading }: ProductGridPro
               <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
                 <Link
                   href={`/${shopToken}/products/${product.id}`}
-                  className="!text-gray-900 hover:!text-warm-600 dark:!text-slate-100 dark:hover:!text-warm-400"
+                  className="!text-gray-900 hover:!text-primary-600 dark:!text-slate-100 dark:hover:!text-primary-400"
                 >
                   <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
                     {product.name}

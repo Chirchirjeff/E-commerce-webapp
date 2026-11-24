@@ -24,8 +24,8 @@ export function ThemedInput({
 
   const inputBaseClasses =
     theme === 'dark'
-      ? 'bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:border-warm-500 focus:ring-warm-500/20'
-      : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:border-warm-400 focus:ring-warm-400/20'
+      ? 'bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:border-primary-500 focus:ring-primary-500/20'
+      : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:border-primary-400 focus:ring-primary-400/20'
 
   return (
     <div className="w-full">

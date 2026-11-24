@@ -24,8 +24,8 @@ export function ThemedBadge({
   const variantClasses = {
     primary:
       theme === 'dark'
-        ? 'bg-warm-600/20 text-warm-300 border border-warm-600/40'
-        : 'bg-warm-100 text-warm-800 border border-warm-300',
+        ? 'bg-primary-600/20 text-primary-300 border border-primary-600/40'
+        : 'bg-primary-100 text-primary-800 border border-primary-300',
     success:
       theme === 'dark'
         ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-600/40'
@@ -40,8 +40,8 @@ export function ThemedBadge({
         : 'bg-red-100 text-red-800 border border-red-300',
     gold:
       theme === 'dark'
-        ? 'bg-gold-600/20 text-gold-300 border border-gold-600/40'
-        : 'bg-gold-100 text-gold-800 border border-gold-300',
+        ? 'bg-accent-600/20 text-accent-300 border border-accent-600/40'
+        : 'bg-accent-100 text-accent-800 border border-accent-300',
   }
 
   return (

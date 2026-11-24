@@ -118,7 +118,7 @@ export function StorefrontSkeleton({ label = 'Loading shop…' }: { label?: stri
   return (
     <SkeletonRegion
       label={label}
-      className="min-h-screen bg-gradient-to-b from-warm-50/40 via-gray-50 to-gray-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950"
+      className="min-h-screen bg-gradient-to-b from-primary-50/40 via-gray-50 to-gray-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950"
     >
       <ShopHeaderSkeleton standalone={false} />
       <div className="mt-6 border-y border-gray-200/70 bg-white/80 dark:border-slate-800 dark:bg-slate-950/80">

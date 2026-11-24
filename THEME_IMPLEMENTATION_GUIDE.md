@@ -191,8 +191,8 @@ const { data: categories, isLoading } = useShopCategories(shopId)
 4. Verify smooth transition and proper color application
 
 **Expected Results**:
-- Light mode: Warm orange/gold tones on white/light backgrounds
-- Dark mode: Warm orange/gold tones on slate/dark backgrounds
+- Light mode: Quza purple (`primary`) with orchid (`accent`) highlights on white/light backgrounds
+- Dark mode: lighter purple/orchid tones on slate/dark backgrounds
 - Theme persists on page reload (checked localStorage)
 
 #### 2. Shop Header & Logo
@@ -202,7 +202,7 @@ const { data: categories, isLoading } = useShopCategories(shopId)
    - Should have a decorative border
 2. Visit a shop without a logo
    - Initial letter should display (e.g., "A" for "Acme Shop")
-   - Background should show gradient from warm to gold
+   - Background should show gradient from purple to orchid
    - Should be same size as logo in other shops
 
 #### 3. Shop Layout Header

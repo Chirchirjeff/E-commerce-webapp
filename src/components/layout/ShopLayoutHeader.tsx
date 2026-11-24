@@ -21,7 +21,7 @@ export function ShopLayoutHeader({
   const bgClass =
     theme === 'dark'
       ? 'bg-gradient-to-r from-slate-800 via-slate-800 to-slate-900 border-b border-slate-700'
-      : 'bg-gradient-to-r from-warm-50 via-white to-gold-50 border-b border-warm-200'
+      : 'bg-gradient-to-r from-primary-50 via-white to-accent-50 border-b border-primary-200'
 
   return (
     <div className={cn(
@@ -36,8 +36,8 @@ export function ShopLayoutHeader({
               <div className={cn(
                 'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white',
                 theme === 'dark'
-                  ? 'bg-gradient-to-br from-warm-600 to-gold-600'
-                  : 'bg-gradient-to-br from-warm-400 to-gold-500'
+                  ? 'bg-gradient-to-br from-primary-600 to-accent-600'
+                  : 'bg-gradient-to-br from-primary-500 to-accent-500'
               )}>
                 {shopName.charAt(0).toUpperCase()}
               </div>

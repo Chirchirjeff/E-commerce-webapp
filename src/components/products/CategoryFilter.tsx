@@ -34,8 +34,8 @@ export function CategoryFilter({
 
   const allProductsActiveClasses =
     theme === 'dark'
-      ? 'bg-warm-600 text-white shadow-lg shadow-warm-600/30'
-      : 'bg-warm-500 text-white shadow-md shadow-warm-500/20'
+      ? 'bg-primary-700 text-white shadow-lg shadow-primary-600/30'
+      : 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
 
   const allProductsInactiveClasses =
     theme === 'dark'
@@ -44,8 +44,8 @@ export function CategoryFilter({
 
   const categoryActiveClasses =
     theme === 'dark'
-      ? 'bg-gold-600/20 text-gold-400 border border-gold-600/40'
-      : 'bg-gold-100 text-gold-700 border border-gold-300'
+      ? 'bg-accent-600/20 text-accent-400 border border-accent-600/40'
+      : 'bg-accent-100 text-accent-700 border border-accent-300'
 
   const categoryInactiveClasses =
     theme === 'dark'

@@ -83,7 +83,7 @@ const THEMES: Record<string, CollectionTheme> = {
     iconAnimation: 'animate-fire-flicker',
   },
   'best-sellers': {
-    headerGradient: 'from-amber-500 via-yellow-400 to-gold-400',
+    headerGradient: 'from-amber-500 via-yellow-400 to-amber-300',
     cardAccent: 'from-amber-500 to-yellow-400',
     badgeBg: 'bg-amber-500',
     badgeText: 'text-white',

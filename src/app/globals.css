@@ -28,11 +28,11 @@ html.dark body {
 }
 
 a {
-  @apply text-warm-600 hover:text-warm-700 transition-colors;
+  @apply text-primary-600 hover:text-primary-700 transition-colors;
 }
 
 html.dark a {
-  @apply text-warm-400 hover:text-warm-300;
+  @apply text-primary-400 hover:text-primary-300;
 }
 
 button {

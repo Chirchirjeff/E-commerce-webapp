@@ -30,7 +30,7 @@ export function ThemedHeader({
   const bgClass =
     theme === 'dark'
       ? 'bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700'
-      : 'bg-gradient-to-r from-warm-50 to-gold-50 border-b border-warm-200'
+      : 'bg-gradient-to-r from-primary-50 to-accent-50 border-b border-primary-200'
 
   const textClass =
     theme === 'dark' ? 'text-white' : 'text-slate-900'
@@ -96,8 +96,8 @@ export function ThemedHeader({
                 className={cn(
                   'p-2 rounded-lg transition-colors',
                   theme === 'dark'
-                    ? 'bg-slate-700 hover:bg-slate-600 text-gold-400'
-                    : 'bg-warm-200 hover:bg-warm-300 text-warm-700'
+                    ? 'bg-slate-700 hover:bg-slate-600 text-accent-400'
+                    : 'bg-primary-200 hover:bg-primary-300 text-primary-700'
                 )}
                 aria-label="Toggle theme"
               >

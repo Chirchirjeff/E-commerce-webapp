@@ -49,9 +49,9 @@ export function SearchBar({
         className={cn(
           'h-12 w-full rounded-full border pl-12 pr-32 text-sm shadow-sm outline-none transition',
           'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400',
-          'focus:border-warm-300 focus:ring-4 focus:ring-warm-100',
+          'focus:border-primary-300 focus:ring-4 focus:ring-primary-100',
           'dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500',
-          'dark:focus:border-warm-500/60 dark:focus:ring-warm-500/15',
+          'dark:focus:border-primary-500/60 dark:focus:ring-primary-500/15',
           '[&::-webkit-search-cancel-button]:hidden'
         )}
       />
@@ -69,7 +69,7 @@ export function SearchBar({
         <button
           type="submit"
           disabled={isLoading}
-          className="inline-flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-warm-500 to-gold-500 px-5 text-sm font-semibold text-white shadow-md shadow-warm-500/25 hover:brightness-105 disabled:opacity-70"
+          className="inline-flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-primary-600 to-accent-500 px-5 text-sm font-semibold text-white shadow-md shadow-primary-500/25 hover:brightness-105 disabled:opacity-70"
         >
           {isLoading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />

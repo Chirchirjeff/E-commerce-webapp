@@ -14,7 +14,7 @@ interface ShopHeaderProps {
 function StatChip({ icon: Icon, label }: { icon: typeof Package; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100/80 px-3 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 dark:bg-slate-800/80 dark:text-slate-300 dark:ring-slate-700">
-      <Icon className="h-3.5 w-3.5 text-warm-500 dark:text-warm-400" aria-hidden="true" />
+      <Icon className="h-3.5 w-3.5 text-primary-500 dark:text-primary-400" aria-hidden="true" />
       {label}
     </span>
   )
@@ -41,9 +41,9 @@ export function ShopHeader({ shop, productCount = 0, categoryCount = 0 }: ShopHe
           />
         ) : (
           // Decorative brand backdrop when the seller hasn't uploaded a cover
-          <div className="absolute inset-0 bg-gradient-to-br from-warm-400 via-warm-500 to-gold-500 dark:from-warm-800 dark:via-warm-900 dark:to-gold-900">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 dark:from-primary-800 dark:via-primary-900 dark:to-accent-900">
             <div className="absolute -left-16 -top-16 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
-            <div className="absolute -bottom-24 right-0 h-96 w-96 rounded-full bg-gold-300/40 blur-3xl dark:bg-gold-600/20" />
+            <div className="absolute -bottom-24 right-0 h-96 w-96 rounded-full bg-accent-300/40 blur-3xl dark:bg-accent-600/20" />
             <div
               className="absolute inset-0 opacity-[0.12]"
               style={{
@@ -73,7 +73,7 @@ export function ShopHeader({ shop, productCount = 0, categoryCount = 0 }: ShopHe
                   priority
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-warm-400 to-gold-500 text-4xl font-extrabold text-white">
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-500 to-accent-500 text-4xl font-extrabold text-white">
                   {shop.name.charAt(0).toUpperCase()}
                 </div>
               )}

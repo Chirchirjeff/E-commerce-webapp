@@ -37,20 +37,20 @@ export function ThemedButton({
   const variantClasses = {
     primary:
       theme === 'dark'
-        ? 'bg-warm-600 text-white hover:bg-warm-500 active:bg-warm-700 shadow-lg shadow-warm-600/30'
-        : 'bg-warm-500 text-white hover:bg-warm-600 active:bg-warm-700 shadow-md shadow-warm-500/30',
+        ? 'bg-primary-700 text-white hover:bg-primary-600 active:bg-primary-700 shadow-lg shadow-primary-600/30'
+        : 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-700 shadow-md shadow-primary-500/30',
     secondary:
       theme === 'dark'
         ? 'bg-slate-700 text-white hover:bg-slate-600 active:bg-slate-800'
         : 'bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400',
     outline:
       theme === 'dark'
-        ? 'border-2 border-gold-600 text-gold-400 hover:bg-gold-600/10 active:bg-gold-600/20'
-        : 'border-2 border-gold-400 text-gold-600 hover:bg-gold-50 active:bg-gold-100',
+        ? 'border-2 border-accent-600 text-accent-400 hover:bg-accent-600/10 active:bg-accent-600/20'
+        : 'border-2 border-accent-400 text-accent-600 hover:bg-accent-50 active:bg-accent-100',
     ghost:
       theme === 'dark'
-        ? 'text-warm-400 hover:bg-warm-600/20 active:bg-warm-600/30'
-        : 'text-warm-600 hover:bg-warm-100 active:bg-warm-200',
+        ? 'text-primary-400 hover:bg-primary-600/20 active:bg-primary-600/30'
+        : 'text-primary-600 hover:bg-primary-100 active:bg-primary-200',
   }
 
   return (

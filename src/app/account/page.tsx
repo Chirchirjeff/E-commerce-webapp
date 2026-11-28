@@ -132,7 +132,7 @@ export default function AccountPage() {
       <section id="security" aria-labelledby="security-heading" className="bg-white rounded-xl border border-gray-200 p-6 scroll-mt-24">
         <div className="mb-4">
           <h2 id="security-heading" className="text-xl font-semibold text-gray-900">Login &amp; security</h2>
-          <p className="text-sm text-gray-500">How you sign in to Quza. Changes need your current password.</p>
+          <p className="text-sm text-gray-500">How you sign in to Quzaurban. Changes need your current password.</p>
         </div>
         {securityNotice && <p className="mb-4 rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm text-gray-700" role="status">{securityNotice}</p>}
         <dl className="divide-y divide-gray-100">

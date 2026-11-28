@@ -32,7 +32,7 @@ export default function HomePage() {
       </div>
       <h1 className="text-2xl font-bold text-gray-900">Open a shop to start shopping</h1>
       <p className="mt-2 text-gray-600">
-        Shops on Quza are reached through the link the seller shares with you. Open that link again to continue shopping.
+        Shops on Quzaurban are reached through the link the seller shares with you. Open that link again to continue shopping.
       </p>
     </div>
   )

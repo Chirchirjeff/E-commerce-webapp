@@ -135,7 +135,7 @@ function CheckoutAccountPageContent() {
             />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</Button>
-            <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }} className="w-full text-sm text-primary-600">{mode === 'login' ? 'New to Quza? Create an account' : 'Already have an account? Sign in'}</button>
+            <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }} className="w-full text-sm text-primary-600">{mode === 'login' ? 'New to Quzaurban? Create an account' : 'Already have an account? Sign in'}</button>
             {mode === 'login' && <Link href={resetHref} className="block w-full text-center text-sm text-primary-600">Forgot password?</Link>}
           </form>
         )}

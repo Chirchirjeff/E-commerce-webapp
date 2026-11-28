@@ -95,7 +95,7 @@ function TrackByOrderNumberPageContent() {
         <section className="mt-6 bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-2 sm:items-start sm:justify-between border-b border-gray-200 pb-5">
             <div>
-              <p className="text-sm text-gray-500">{order.shop?.name || 'Quza order'}</p>
+              <p className="text-sm text-gray-500">{order.shop?.name || 'Quzaurban order'}</p>
               <h2 className="mt-1 font-mono text-2xl font-bold text-gray-900">{order.orderNumber}</h2>
             </div>
             <span className="inline-flex w-fit rounded-full bg-green-100 px-3 py-1 text-sm font-semibold capitalize text-green-800">{order.status}</span>

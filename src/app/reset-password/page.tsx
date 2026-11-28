@@ -208,11 +208,11 @@ function ResetPasswordContent() {
   const description = doneWithoutSession
     ? 'Your password has been changed. Sign in with your new password to continue.'
     : step === 'email'
-      ? 'Enter the email address for your Quza account and we’ll send you a 6-digit reset code.'
+      ? 'Enter the email address for your Quzaurban account and we’ll send you a 6-digit reset code.'
       : step === 'code'
         ? <>Enter the 6-digit code we sent to <span className="font-medium text-gray-800">{sentToEmail}</span>.</>
         : legacyToken
-          ? 'Enter a new password for your Quza buyer account.'
+          ? 'Enter a new password for your Quzaurban buyer account.'
           : <>Create a new password for <span className="font-medium text-gray-800">{sentToEmail}</span>.</>
 
   return (

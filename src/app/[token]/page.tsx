@@ -17,6 +17,7 @@ import { productsAPI } from '@/lib/api'
 import { Product } from '@/types'
 import { cn } from '@/lib/utils'
 import { useShopContextStore } from '@/stores/shopContextStore'
+import { captureUtmParams } from '@/lib/utmParams'
 
 // Collection carousels pull in embla-carousel; split them out of the initial
 // bundle. The chunk starts loading while collections are still being fetched.
@@ -50,6 +51,11 @@ export default function StorefrontPage() {
   useEffect(() => {
     if (shopData && token) setLastShopToken(token)
   }, [shopData, token, setLastShopToken])
+
+  // Capture UTM params on first visit — fire-and-forget, never blocks render
+  useEffect(() => {
+    captureUtmParams(searchParams.toString(), { shopId: shopData?.id })
+  }, [searchParams, shopData?.id])
 
   // ── Categories ─────────────────────────────────────────────────────────────
   const {

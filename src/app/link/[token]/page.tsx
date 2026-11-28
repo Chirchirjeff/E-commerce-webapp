@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { productLinksAPI } from '@/lib/api'
 import { ProductDetailSkeleton } from '@/components/skeletons/PageSkeletons'
+import { captureUtmParams } from '@/lib/utmParams'
 
 /**
  * Product Link Resolution Page
@@ -17,6 +18,7 @@ import { ProductDetailSkeleton } from '@/components/skeletons/PageSkeletons'
 export default function ProductLinkPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const token = params.token as string
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,15 +32,20 @@ export default function ProductLinkPage() {
 
     const resolveAndRedirect = async () => {
       try {
-        // Call the backend to resolve the product link token
-        // This will also record the visit for analytics
-        const response = await productLinksAPI.resolve(token)
+        // Append any utm_* params already in the URL to the resolve request
+        // so the backend records them on the ProductLinkVisit row.
+        const utmQuery = searchParams.toString() || undefined
+        const response = await productLinksAPI.resolve(token, utmQuery)
 
         if (response.data.success && response.data.data.product) {
           const product = response.data.data.product
-          
+
+          // Capture UTM params in sessionStorage and fire the platform-wide
+          // visit event (covers cases where the link was not a tracked token).
+          captureUtmParams(searchParams.toString(), { shopId: product.shopId })
+
           // Redirect to the product detail page
-          // Format: /{shopId}/products/{productId}
+          // Format: /{shopToken}/products/{productId}
           const productUrl = `/${product.shopId}/products/${product.id}`
           router.push(productUrl)
         } else {
@@ -56,7 +63,7 @@ export default function ProductLinkPage() {
     }
 
     resolveAndRedirect()
-  }, [token, router])
+  }, [token, router, searchParams])
 
   if (isLoading) {
     // The link resolves to a product page, so preview that layout while we redirect.

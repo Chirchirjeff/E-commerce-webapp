@@ -145,10 +145,14 @@ export const productLinksAPI = {
 
   /**
    * Resolve a product link by token (public endpoint)
-   * Records a visit and returns product data
+   * Records a visit and returns product data.
+   * utm_* params are forwarded as query string so the backend records them
+   * on the ProductLinkVisit row.
    */
-  resolve: (token: string) =>
-    apiClient.get(`/product-links/resolve/${token}`),
+  resolve: (token: string, utmQuery?: string) => {
+    const qs = utmQuery ? `?${utmQuery}` : ''
+    return apiClient.get(`/product-links/resolve/${token}${qs}`)
+  },
 }
 
 // ========================================
